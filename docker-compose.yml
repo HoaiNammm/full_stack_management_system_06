@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  notify-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: notify_sql_server
+    environment:
+      - ACCEPT_EULA=dl123
+      - MSSQL_SA_PASSWORD=thehoang123!
+    ports:
+      - "1433:1433"
