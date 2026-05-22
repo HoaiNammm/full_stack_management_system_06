@@ -3,16 +3,29 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using NotifyService.Api.Configurations;
 using NotifyService.Api.Services;
+using Microsoft.EntityFrameworkCore;
+using NotifyService.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
+// 
+builder.Services.AddDbContext<NotifyDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("Jwt"));
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
 
 if (jwtSettings == null || string.IsNullOrWhiteSpace(jwtSettings.Secret))
@@ -51,6 +64,8 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
