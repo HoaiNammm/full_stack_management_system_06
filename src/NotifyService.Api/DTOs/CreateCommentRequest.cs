@@ -7,4 +7,7 @@ public class CreateCommentRequest
     public Guid? ProjectId { get; set; }
 
     public string Content { get; set; } = string.Empty;
+
+    public List<Guid> MentionedUserIds { get; set; } = new();
+    public List<CommentAttachmentRequest> Attachments { get; set; } = new() ;
 }

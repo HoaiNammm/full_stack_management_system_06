@@ -73,7 +73,7 @@ User nhập email
 2. Comments
    2.1 Comments
    2.2 CommentMentions
-   2.3 CommentAttachments
+   2.3 CommentAttachm   ents
    2.4 ActivityLogs
 
 - Thứ tự thực hiện
@@ -83,19 +83,29 @@ User nhập email
 
     API lấy comment theo task
     - GET /api/comments/task/{taskId}
-    
+
+    API sửa comment  
     Lấy danh sách bình luận của một task 
     - PUT /api/comments/{commentId}
     - Chỉ người tạo comment mới được sửa comment
     - Không sửa comment đã bị xóa mềm
     - Cập nhật Content
     - Cập nhật UpdatedAt
+  
+    API xóa comment
+    - DELETE /api/comments/{commentId}
+    Mục tiêu
+    - Không xóa hẳn khỏi database
+    - Chỉ đổi IsDeleted = true
+    - Chỉ người tạo comment mới được xóa
+    
 
 
-   3 API sửa comment  
-   4 API xóa mềm comment
-   5 Khi tạo/sửa/xóa comment thì ghi ActivityLogs
-   6 Sau đó mới xử lý Mentions và Attachments
+   Khi tạo/sửa/xóa comment thì ghi ActivityLogs
+   Sau đó mới xử lý Mentions và Attachments
+    - Tạo comment có danh sách mentionedUserIds
+    - Lưu dữ liệu vào bảng CommentMentions
+    - GET comments theo task trả kèm danh sách mentionedUserIds
 
 3. ActivityLogs
 4. Notifications + UserNotifications

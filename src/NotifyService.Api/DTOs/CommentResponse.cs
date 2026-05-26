@@ -15,4 +15,7 @@ public class CommentResponse
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
+    public List<Guid> MentionedUserIds { get; set; } = new();
+    public List<CommentAttachmentResponse> Attachments { get; set; } = new();   
+
 }
