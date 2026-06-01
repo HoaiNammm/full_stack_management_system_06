@@ -96,7 +96,17 @@ public class CommentsController : ControllerBase
             action: "COMMENT_CREATED",
             description: "User created a comment on task",
             metadataJson: $"{{\"commentId\":\"{comment.Id}\"}}"
+
         );
+        AddAuditLog(
+            userId: userId,
+            action: "CREATE",
+            entityName: "Comment",
+            entityId: comment.Id.ToString(),
+            oldValuesJson: null,
+            newValuesJson: $"{{\"content\":\"{comment.Content}\"}}"
+        );
+
         // goi helper khi tao comment
 
         CreateMentionNotifications(
@@ -197,6 +207,20 @@ public class CommentsController : ControllerBase
             return Forbid();
         }
 
+        var oldContent = comment.Content;
+
+        comment.Content = request.Content.Trim();
+        comment.UpdatedAt = DateTime.UtcNow;
+
+        AddAuditLog(
+            userId: userId,
+            action: "UPDATE",
+            entityName: "Comment",
+            entityId: comment.Id.ToString(),
+            oldValuesJson: $"{{\"content\":\"{oldContent}\"}}",
+            newValuesJson: $"{{\"content\":\"{comment.Content}\"}}"
+        );
+
         comment.Content = request.Content.Trim();
         comment.UpdatedAt = DateTime.UtcNow; // Cập nhật thời gian sửa
         AddActivityLog(
@@ -221,6 +245,8 @@ public class CommentsController : ControllerBase
             UpdatedAt = comment.UpdatedAt
         });
     }
+
+
     [HttpDelete("{commentId:guid}")]
     public async Task<IActionResult> DeleteComment(Guid commentId)
     {
@@ -255,6 +281,16 @@ public class CommentsController : ControllerBase
             description: "User deleted a comment on task",
             metadataJson: $"{{\"commentId\":\"{comment.Id}\"}}"
         );
+
+        AddAuditLog(
+            userId: userId,
+            action: "SOFT_DELETE",
+            entityName: "Comment",
+            entityId: comment.Id.ToString(),
+            oldValuesJson: "{\"isDeleted\":false}",
+            newValuesJson: "{\"isDeleted\":true}"
+        );
+
         await _context.SaveChangesAsync();
 
         return Ok(new
@@ -262,6 +298,7 @@ public class CommentsController : ControllerBase
             message = "Xóa bình luận thành công",
             commentId = comment.Id
         });
+
     }
 
     //Nhat ki hoat dong tai/sua xoa comment
@@ -337,5 +374,35 @@ public class CommentsController : ControllerBase
 
         _context.Notifications.Add(notification);
     }
+
+    // Ghi log tao sau khi tao  comment
+    private void AddAuditLog(
+
+    Guid? userId,
+    string action,
+    string entityName,
+    string? entityId,
+    string? oldValuesJson = null,
+    string? newValuesJson = null)
+
+    {
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Action = action,
+            EntityName = entityName,
+            EntityId = entityId,
+            OldValuesJson = oldValuesJson,
+            NewValuesJson = newValuesJson,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+            CreatedAt = DateTime.UtcNow
+        });
+
+
+    }
+
+
+
 
 }
