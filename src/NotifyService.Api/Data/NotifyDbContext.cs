@@ -47,16 +47,47 @@ public class NotifyDbContext : DbContext
         modelBuilder.Entity<User>(entity =>
         {
             entity.ToTable("Users");
+
             entity.HasKey(x => x.Id);
 
-            entity.Property(x => x.FullName).HasMaxLength(100).IsRequired();
-            entity.Property(x => x.Email).HasMaxLength(150).IsRequired();
-            entity.Property(x => x.PasswordHash).IsRequired();
-            entity.Property(x => x.Role).HasMaxLength(50).IsRequired();
-            entity.Property(x => x.IsActive).HasDefaultValue(true);
-            entity.Property(x => x.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(x => x.FullName)
+                .HasMaxLength(100)
+                .IsRequired();
 
-            entity.HasIndex(x => x.Email).IsUnique();
+            entity.Property(x => x.Email)
+                .HasMaxLength(150)
+                .IsRequired();
+
+            entity.HasIndex(x => x.Email)
+                .IsUnique();
+
+            entity.Property(x => x.PasswordHash)
+                .IsRequired();
+
+            entity.Property(x => x.Role)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(x => x.PhoneNumber)
+                .HasMaxLength(20);
+
+            entity.Property(x => x.AvatarUrl)
+                .HasMaxLength(500);
+
+            entity.Property(x => x.Department)
+                .HasMaxLength(100);
+
+            entity.Property(x => x.Position)
+                .HasMaxLength(100);
+
+            entity.Property(x => x.IsActive)
+                .HasDefaultValue(true);
+
+            entity.Property(x => x.EmailConfirmed)
+                .HasDefaultValue(false);
+
+            entity.Property(x => x.CreatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>

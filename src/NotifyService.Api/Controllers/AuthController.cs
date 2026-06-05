@@ -84,6 +84,8 @@ public class AuthController : ControllerBase
                 IsSuccess = true,
                 FailureReason = null
             });
+            user.LastLoginAt = DateTime.UtcNow;
+            user.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
@@ -117,7 +119,13 @@ public class AuthController : ControllerBase
                     Id = user.Id,
                     FullName = user.FullName,
                     Email = user.Email,
-                    Role = user.Role
+                    Role = user.Role,
+                    PhoneNumber = user.PhoneNumber,
+                    AvatarUrl = user.AvatarUrl,
+                    Department = user.Department,
+                    Position = user.Position,
+                    IsActive = user.IsActive,
+                    EmailConfirmed = user.EmailConfirmed
                 }
             });
         }
@@ -144,7 +152,8 @@ public class AuthController : ControllerBase
                 x.IpAddress,
                 x.UserAgent,
                 x.IsSuccess,
-                x.FailureReason
+                x.FailureReason,
+
             })
             .ToListAsync();
 
@@ -169,7 +178,13 @@ public class AuthController : ControllerBase
             FullName = request.FullName.Trim(),
             Email = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            Role = request.Role,
+            PhoneNumber = request.PhoneNumber,
+            AvatarUrl = request.AvatarUrl,
+            Department = request.Department,
+            Position = request.Position,
             IsActive = true,
+            EmailConfirmed = false,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -185,14 +200,20 @@ public class AuthController : ControllerBase
                 user.FullName,
                 user.Email,
                 user.Role,
-                user.IsActive
+                user.PhoneNumber,
+                user.AvatarUrl,
+                user.Department,
+                user.Position,
+                user.IsActive,
+                user.EmailConfirmed,
+                user.CreatedAt
             }
         });
-    }    
-        // User nhập email
-        // → Backend tạo reset token
-        // → Lưu vào bảng PasswordResetTokens
-        // → User dùng reset token để đặt mật khẩu mới
+    }
+    // User nhập email
+    // → Backend tạo reset token
+    // → Lưu vào bảng PasswordResetTokens
+    // → User dùng reset token để đặt mật khẩu mới
 
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
@@ -272,21 +293,96 @@ public class AuthController : ControllerBase
             message = "Đổi mật khẩu thành công"
         });
     }
+
     [Authorize]
     [HttpGet("me")]
-    public IActionResult Me()
+    public async Task<IActionResult> Me()
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var email = User.FindFirst(ClaimTypes.Email)?.Value;
-        var name = User.FindFirst(ClaimTypes.Name)?.Value;
-        var role = User.FindFirst(ClaimTypes.Role)?.Value;
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new { message = "Token không hợp lệ hoặc thiếu UserId" });
+        }
+
+        var user = await _context.Users
+            .Where(x => x.Id == userId)
+            .Select(x => new
+            {
+                x.Id,
+                x.FullName,
+                x.Email,
+                x.Role,
+                x.PhoneNumber,
+                x.AvatarUrl,
+                x.Department,
+                x.Position,
+                x.IsActive,
+                x.EmailConfirmed,
+                x.LastLoginAt,
+                x.CreatedAt,
+                x.UpdatedAt
+            })
+            .FirstOrDefaultAsync();
+
+        if (user == null)
+        {
+            return NotFound(new { message = "Không tìm thấy người dùng" });
+        }
+
+        return Ok(user);
+    }
+
+    [Authorize]
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new { message = "Token không hợp lệ hoặc thiếu UserId" });
+        }
+
+        var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == userId);
+
+        if (user == null)
+        {
+            return NotFound(new { message = "Không tìm thấy người dùng" });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.FullName))
+        {
+            return BadRequest(new { message = "Họ tên không được để trống" });
+        }
+
+        user.FullName = request.FullName.Trim();
+        user.PhoneNumber = request.PhoneNumber;
+        user.AvatarUrl = request.AvatarUrl;
+        user.Department = request.Department;
+        user.Position = request.Position;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
 
         return Ok(new
         {
-            id = userId,
-            email,
-            fullName = name,
-            role
+            message = "Cập nhật hồ sơ thành công",
+            user = new
+            {
+                user.Id,
+                user.FullName,
+                user.Email,
+                user.Role,
+                user.PhoneNumber,
+                user.AvatarUrl,
+                user.Department,
+                user.Position,
+                user.IsActive,
+                user.EmailConfirmed,
+                user.LastLoginAt,
+                user.UpdatedAt
+            }
         });
     }
 }

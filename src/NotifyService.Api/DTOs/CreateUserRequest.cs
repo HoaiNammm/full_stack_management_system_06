@@ -1,6 +1,6 @@
 namespace NotifyService.Api.DTOs;
 
-public class RegisterRequest
+public class CreateUserRequest
 {
     public string FullName { get; set; } = string.Empty;
 
