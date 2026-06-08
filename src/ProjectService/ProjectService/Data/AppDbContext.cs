@@ -10,6 +10,7 @@ namespace ProjectService.Data
         public DbSet<Project> Projects { get; set; }
         public DbSet<Member> Members { get; set; }
         public DbSet<Sprint> Sprints { get; set; }
+        public DbSet<Milestone> Milestones { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -20,6 +21,9 @@ namespace ProjectService.Data
             modelBuilder.Entity<Project>()
                 .Property(p => p.Id)
                 .HasDefaultValueSql("NEWID()");
+            modelBuilder.Entity<Project>()
+                .Property(p => p.Status)
+                .HasDefaultValue(0);
 
             modelBuilder.Entity<Member>()
                 .HasKey(m => m.Id);
@@ -29,7 +33,8 @@ namespace ProjectService.Data
             modelBuilder.Entity<Member>()
                 .HasOne(m => m.Project)
                 .WithMany(p => p.Members)
-                .HasForeignKey(m => m.ProjectId);
+                .HasForeignKey(m => m.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Sprint>()
                 .HasKey(s => s.Id);
@@ -37,9 +42,27 @@ namespace ProjectService.Data
                 .Property(s => s.Id)
                 .HasDefaultValueSql("NEWID()");
             modelBuilder.Entity<Sprint>()
+                .Property(s => s.Status)
+                .HasDefaultValue(0);
+            modelBuilder.Entity<Sprint>()
                 .HasOne(s => s.Project)
                 .WithMany(p => p.Sprints)
-                .HasForeignKey(s => s.ProjectId);
+                .HasForeignKey(s => s.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Milestone>()
+                .HasKey(ms => ms.Id);
+            modelBuilder.Entity<Milestone>()
+                .Property(ms => ms.Id)
+                .HasDefaultValueSql("NEWID()");
+            modelBuilder.Entity<Milestone>()
+                .Property(ms => ms.Status)
+                .HasDefaultValue(0);
+            modelBuilder.Entity<Milestone>()
+                .HasOne(ms => ms.Project)
+                .WithMany(p => p.Milestones)
+                .HasForeignKey(ms => ms.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
