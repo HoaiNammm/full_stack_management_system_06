@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NotifyService.Api.Configurations;
 using NotifyService.Api.Models;
+using System.Security.Cryptography;
 
 namespace NotifyService.Api.Services;
 
@@ -42,5 +43,16 @@ public class JwtService
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+    //  Ham tao refresh token ngau nhien
+    // 
+    public string GenerateRefreshToken()
+    {
+        var randomBytes = new byte[64];
+
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(randomBytes);
+
+        return Convert.ToBase64String(randomBytes);
     }
 }

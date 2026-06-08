@@ -1,4 +1,5 @@
 <template>
+<<<<<<< HEAD
   <div class="flex h-screen overflow-hidden bg-background text-on-background">
     <SideBar />
     <div class="md:ml-[260px] flex flex-col flex-1 h-screen overflow-hidden">
@@ -14,3 +15,7 @@
 import SideBar from './components/SideBar.vue'
 import TopBar from './components/TopBar.vue'
 </script>
+=======
+  <router-view />
+</template>     
+>>>>>>> notify-login

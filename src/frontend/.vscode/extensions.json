@@ -1,3 +1,13 @@
 {
+<<<<<<< HEAD
   "recommendations": ["Vue.volar"]
+=======
+  "recommendations": [
+    "Vue.volar",
+    "dbaeumer.vscode-eslint",
+    "EditorConfig.EditorConfig",
+    "oxc.oxc-vscode",
+    "esbenp.prettier-vscode"
+  ]
+>>>>>>> notify-login
 }
