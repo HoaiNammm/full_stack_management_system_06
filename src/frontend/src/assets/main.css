@@ -1,0 +1,13 @@
+/* src/assets/main.css hoặc src/style.css */
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+#app {
+  max-width: 100% !important; /* Phá vỡ giới hạn 1280px mặc định */
+  width: 100vw;
+  padding: 0 !important; /* Xóa padding mặc định */
+  margin: 0;
+}

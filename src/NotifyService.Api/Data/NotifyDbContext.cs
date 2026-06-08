@@ -15,7 +15,7 @@ public class NotifyDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<LoginHistory> LoginHistories => Set<LoginHistory>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
-
+    public DbSet<SystemRole> SystemRoles => Set<SystemRole>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
     public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
@@ -340,5 +340,32 @@ public class NotifyDbContext : DbContext
             entity.HasIndex(x => x.ProjectId);
             entity.HasIndex(x => x.CreatedAt);
         });
+        modelBuilder.Entity<SystemRole>(entity =>
+        {
+            entity.ToTable("SystemRoles");
+
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Code)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(x => x.Name)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(x => x.Description)
+                .HasMaxLength(300);
+
+            entity.Property(x => x.IsActive)
+                .HasDefaultValue(true);
+
+            entity.Property(x => x.CreatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+
+            entity.HasIndex(x => x.Code)
+                .IsUnique();
+        });
     }
+
 }

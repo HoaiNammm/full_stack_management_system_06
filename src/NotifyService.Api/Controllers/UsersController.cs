@@ -98,6 +98,15 @@ public class UsersController : ControllerBase
         {
             return BadRequest(new { message = "Mật khẩu không được để trống" });
         }
+        var role = string.IsNullOrWhiteSpace(request.Role) ? "User" : request.Role;
+
+        var roleExists = await _context.SystemRoles
+            .AnyAsync(x => x.Code == role && x.IsActive);
+
+        if (!roleExists)
+        {
+            return BadRequest(new { message = "Role không hợp lệ hoặc chưa được kích hoạt" });
+        }
 
         var user = new User
         {
@@ -105,7 +114,7 @@ public class UsersController : ControllerBase
             FullName = request.FullName.Trim(),
             Email = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = string.IsNullOrWhiteSpace(request.Role) ? "Member" : request.Role,
+            Role = role,
             PhoneNumber = request.PhoneNumber,
             AvatarUrl = request.AvatarUrl,
             Department = request.Department,
@@ -114,6 +123,8 @@ public class UsersController : ControllerBase
             EmailConfirmed = false,
             CreatedAt = DateTime.UtcNow
         };
+
+
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
@@ -208,14 +219,13 @@ public class UsersController : ControllerBase
     [HttpPatch("{id:guid}/role")]
     public async Task<IActionResult> UpdateUserRole(Guid id, [FromBody] UpdateUserRoleRequest request)
     {
-        var allowedRoles = new[] { "ProjectManager", "Member", "Viewer", "Admin" };
+        var roleExists = await _context.SystemRoles.AnyAsync(x => x.Code == request.Role && x.IsActive);
 
-        if (!allowedRoles.Contains(request.Role))
+        if (!roleExists)
         {
             return BadRequest(new
             {
-                message = "Role không hợp lệ",
-                allowedRoles
+                message = "Role không hợp lệ hoặc chưa được kích hoạt"
             });
         }
 

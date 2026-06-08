@@ -178,11 +178,10 @@ public class AuthController : ControllerBase
             FullName = request.FullName.Trim(),
             Email = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = request.Role,
+
             PhoneNumber = request.PhoneNumber,
             AvatarUrl = request.AvatarUrl,
-            Department = request.Department,
-            Position = request.Position,
+
             IsActive = true,
             EmailConfirmed = false,
             CreatedAt = DateTime.UtcNow
@@ -193,17 +192,14 @@ public class AuthController : ControllerBase
 
         return Ok(new
         {
-            message = "Tạo tài khoản thành công",
+            message = "Đăng ký tài khoản thành công",
             user = new
             {
                 user.Id,
                 user.FullName,
                 user.Email,
-                user.Role,
                 user.PhoneNumber,
                 user.AvatarUrl,
-                user.Department,
-                user.Position,
                 user.IsActive,
                 user.EmailConfirmed,
                 user.CreatedAt
