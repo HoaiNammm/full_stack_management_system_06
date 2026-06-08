@@ -7,7 +7,7 @@ using System.Security.Claims;
 namespace ProjectService.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/projects")]
     public class ProjectController : ControllerBase
     {
         private readonly ProjectService.Services.ProjectService _projectService;
@@ -44,16 +44,33 @@ namespace ProjectService.Controllers
 
             var project = new Project
             {
-                Id = Guid.NewGuid(),
-                Name = request.Name,
+                Id          = Guid.NewGuid(),
+                Name        = request.Name,
                 Description = request.Description,
-                CreatedBy = Guid.Parse(userId),
-                CreatedAt = DateTime.UtcNow
+                Status      = 0,
+                Color       = request.Color,
+                StartDate   = request.StartDate,
+                EndDate     = request.EndDate,
+                CreatedBy   = Guid.Parse(userId!),
+                CreatedAt   = DateTime.UtcNow
             };
 
             await _projectService.CreateProjectAsync(project);
             return CreatedAtAction(nameof(GetProject), new { id = project.Id },
                 new { success = true, data = project });
+        }
+
+        [Authorize]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateProject(Guid id, [FromBody] UpdateProjectRequest request)
+        {
+            var project = await _projectService.UpdateProjectAsync(
+                id, request.Name, request.Description, request.Status,
+                request.Color, request.StartDate, request.EndDate);
+            if (project == null)
+                return NotFound(new { success = false, error = new { code = "PROJECT_NOT_FOUND" } });
+
+            return Ok(new { success = true, data = project });
         }
 
         [Authorize]
@@ -70,7 +87,20 @@ namespace ProjectService.Controllers
 
     public class CreateProjectRequest
     {
-        public string Name { get; set; }
-        public string Description { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string? Color { get; set; }       // Hex, e.g. "#4F46E5"
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+    }
+
+    public class UpdateProjectRequest
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public int Status { get; set; }
+        public string? Color { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
     }
 }

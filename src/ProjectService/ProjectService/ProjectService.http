@@ -1,6 +1,210 @@
-@ProjectService_HostAddress = http://localhost:5047
+@host = http://localhost:5047
 
-GET {{ProjectService_HostAddress}}/weatherforecast/
+# =============================================
+# BƯỚC 1: Lấy JWT token (từ NotifyService)
+# Thay {{token}} bằng token thực sau khi login
+# =============================================
+@token = PASTE_YOUR_JWT_HERE
+
+# =============================================
+# PROJECTS
+# =============================================
+
+### Lấy danh sách dự án
+GET {{host}}/api/projects
+Authorization: Bearer {{token}}
 Accept: application/json
+
+###
+
+### Lấy chi tiết dự án (thay projectId)
+@projectId = 00000000-0000-0000-0000-000000000000
+
+GET {{host}}/api/projects/{{projectId}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+### Tạo dự án mới
+POST {{host}}/api/projects
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Hệ thống quản lý dự án",
+  "description": "Dự án xây dựng hệ thống quản lý công việc",
+  "color": "#4F46E5",
+  "startDate": "2026-06-01T00:00:00Z",
+  "endDate": "2026-12-31T00:00:00Z"
+}
+
+###
+
+### Cập nhật dự án
+PUT {{host}}/api/projects/{{projectId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Hệ thống quản lý dự án v2",
+  "description": "Mô tả cập nhật",
+  "status": 1,
+  "color": "#10B981",
+  "startDate": "2026-06-01T00:00:00Z",
+  "endDate": "2026-12-31T00:00:00Z"
+}
+
+###
+
+### Xóa dự án
+DELETE {{host}}/api/projects/{{projectId}}
+Authorization: Bearer {{token}}
+
+###
+
+# =============================================
+# MEMBERS
+# =============================================
+
+### Lấy danh sách thành viên
+GET {{host}}/api/projects/{{projectId}}/members
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+### Thêm thành viên (Role: Owner=0, Manager=1, Member=2, Viewer=3)
+@userId = 00000000-0000-0000-0000-000000000001
+
+POST {{host}}/api/projects/{{projectId}}/members
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "role": 2
+}
+
+###
+
+### Đổi role thành viên
+@memberId = 00000000-0000-0000-0000-000000000002
+
+PUT {{host}}/api/projects/{{projectId}}/members/{{memberId}}/role
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "role": 1
+}
+
+###
+
+### Xóa thành viên
+DELETE {{host}}/api/projects/{{projectId}}/members/{{memberId}}
+Authorization: Bearer {{token}}
+
+###
+
+# =============================================
+# SPRINTS
+# =============================================
+
+### Lấy danh sách sprint
+GET {{host}}/api/projects/{{projectId}}/sprints
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+### Tạo sprint (EndDate tự động = StartDate + 14 ngày)
+POST {{host}}/api/projects/{{projectId}}/sprints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Sprint 1",
+  "description": "Sprint đầu tiên",
+  "goal": "Hoàn thành thiết kế database và API cơ bản",
+  "startDate": "2026-06-09T00:00:00Z"
+}
+
+###
+
+### Lấy chi tiết sprint
+@sprintId = 00000000-0000-0000-0000-000000000003
+
+GET {{host}}/api/projects/{{projectId}}/sprints/{{sprintId}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+### Cập nhật sprint - kích hoạt (status=1 → publish event sprint.started)
+PUT {{host}}/api/projects/{{projectId}}/sprints/{{sprintId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Sprint 1",
+  "description": "Sprint đầu tiên",
+  "goal": "Hoàn thành thiết kế database và API cơ bản",
+  "startDate": "2026-06-09T00:00:00Z",
+  "endDate": "2026-06-23T00:00:00Z",
+  "status": 1
+}
+
+###
+
+### Xóa sprint
+DELETE {{host}}/api/projects/{{projectId}}/sprints/{{sprintId}}
+Authorization: Bearer {{token}}
+
+###
+
+# =============================================
+# MILESTONES
+# =============================================
+
+### Lấy danh sách milestone
+GET {{host}}/api/projects/{{projectId}}/milestones
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+### Tạo milestone
+POST {{host}}/api/projects/{{projectId}}/milestones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "MVP Release",
+  "description": "Phát hành phiên bản MVP",
+  "targetDate": "2026-08-01T00:00:00Z"
+}
+
+###
+
+### Cập nhật milestone
+@milestoneId = 00000000-0000-0000-0000-000000000004
+
+PUT {{host}}/api/projects/{{projectId}}/milestones/{{milestoneId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "MVP Release",
+  "description": "Phát hành phiên bản MVP",
+  "targetDate": "2026-08-01T00:00:00Z",
+  "status": 1
+}
+
+###
+
+### Xóa milestone
+DELETE {{host}}/api/projects/{{projectId}}/milestones/{{milestoneId}}
+Authorization: Bearer {{token}}
 
 ###

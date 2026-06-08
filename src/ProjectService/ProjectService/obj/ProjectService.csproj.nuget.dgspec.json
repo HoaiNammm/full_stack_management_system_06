@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "F:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj": {}
+    "f:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj": {}
   },
   "projects": {
-    "F:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj": {
+    "f:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "F:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj",
+        "projectUniqueName": "f:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj",
         "projectName": "ProjectService",
-        "projectPath": "F:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj",
+        "projectPath": "f:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj",
         "packagesPath": "C:\\Users\\chuti\\.nuget\\packages\\",
-        "outputPath": "F:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\obj\\",
+        "outputPath": "f:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -73,6 +73,10 @@
               "suppressParent": "All",
               "target": "Package",
               "version": "[8.0.16, )"
+            },
+            "RabbitMQ.Client": {
+              "target": "Package",
+              "version": "[6.8.1, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",

@@ -34,10 +34,21 @@ namespace ProjectService.Controllers
                 ProjectId = projectId,
                 UserId = request.UserId,
                 Role = request.Role,
-                CreatedAt = DateTime.UtcNow
+                JoinedAt = DateTime.UtcNow
             };
 
             await _memberService.AddMemberAsync(member);
+            return Ok(new { success = true, data = member });
+        }
+
+        [Authorize]
+        [HttpPut("{memberId}/role")]
+        public async Task<IActionResult> UpdateMemberRole(Guid projectId, Guid memberId, [FromBody] UpdateMemberRoleRequest request)
+        {
+            var member = await _memberService.UpdateMemberRoleAsync(memberId, request.Role);
+            if (member == null)
+                return NotFound(new { success = false, error = new { code = "MEMBER_NOT_FOUND" } });
+
             return Ok(new { success = true, data = member });
         }
 
@@ -56,6 +67,11 @@ namespace ProjectService.Controllers
     public class AddMemberRequest
     {
         public Guid UserId { get; set; }
-        public int Role { get; set; }
+        public int Role { get; set; }  // Owner=0, Manager=1, Member=2, Viewer=3
+    }
+
+    public class UpdateMemberRoleRequest
+    {
+        public int Role { get; set; }  // Owner=0, Manager=1, Member=2, Viewer=3
     }
 }

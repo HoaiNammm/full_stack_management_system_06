@@ -167,3 +167,4 @@ F:\BE_Fullstack\full_stack_management_system_06\src\ProjectService\ProjectServic
 F:\BE_Fullstack\full_stack_management_system_06\src\ProjectService\ProjectService\obj\Debug\net8.0\ProjectService.pdb
 F:\BE_Fullstack\full_stack_management_system_06\src\ProjectService\ProjectService\obj\Debug\net8.0\ProjectService.genruntimeconfig.cache
 F:\BE_Fullstack\full_stack_management_system_06\src\ProjectService\ProjectService\obj\Debug\net8.0\ref\ProjectService.dll
+f:\BE_Fullstack\full_stack_management_system_06\src\ProjectService\ProjectService\bin\Debug\net8.0\RabbitMQ.Client.dll
