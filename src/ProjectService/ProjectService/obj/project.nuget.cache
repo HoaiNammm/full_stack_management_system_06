@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "itv1z+/Ry/s=",
+  "dgSpecHash": "Jo8pZN0KT24=",
   "success": true,
-  "projectFilePath": "f:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj",
+  "projectFilePath": "F:\\BE_Fullstack\\ltd\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\chuti\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\chuti\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",

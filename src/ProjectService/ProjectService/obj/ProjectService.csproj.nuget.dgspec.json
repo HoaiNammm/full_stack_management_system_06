@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "f:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj": {}
+    "F:\\BE_Fullstack\\ltd\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj": {}
   },
   "projects": {
-    "f:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj": {
+    "F:\\BE_Fullstack\\ltd\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "f:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj",
+        "projectUniqueName": "F:\\BE_Fullstack\\ltd\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj",
         "projectName": "ProjectService",
-        "projectPath": "f:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj",
+        "projectPath": "F:\\BE_Fullstack\\ltd\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\ProjectService.csproj",
         "packagesPath": "C:\\Users\\chuti\\.nuget\\packages\\",
-        "outputPath": "f:\\BE_Fullstack\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\obj\\",
+        "outputPath": "F:\\BE_Fullstack\\ltd\\full_stack_management_system_06\\src\\ProjectService\\ProjectService\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
