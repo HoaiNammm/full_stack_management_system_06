@@ -18,6 +18,13 @@ namespace ProjectService.Services
             return await _context.Projects.ToListAsync();
         }
 
+        public async Task<List<Project>> GetUserProjectsAsync(Guid userId)
+        {
+            return await _context.Projects
+                .Where(p => p.Members.Any(m => m.UserId == userId))
+                .ToListAsync();
+        }
+
         public async Task<Project?> GetProjectByIdAsync(Guid id)
         {
             return await _context.Projects

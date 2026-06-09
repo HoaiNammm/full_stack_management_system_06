@@ -2,95 +2,101 @@ using Microsoft.EntityFrameworkCore;
 using TaskService.Data;
 using TaskService.Models;
 
-namespace TaskService.Services
+namespace TaskService.Services;
+
+public class KanbanService
 {
-    public class KanbanService
+    private readonly AppDbContext _db;
+
+    public KanbanService(AppDbContext db) => _db = db;
+
+    public async Task<List<KanbanColumn>> GetColumnsByProjectAsync(Guid projectId)
+        => await _db.KanbanColumns
+                    .Where(c => c.ProjectId == projectId)
+                    .OrderBy(c => c.Position)
+                    .ToListAsync();
+
+    public async Task<KanbanColumn?> GetColumnByIdAsync(Guid id)
+        => await _db.KanbanColumns.FindAsync(id);
+
+    // Called by ProjectEventConsumer when project.created event is received.
+    // Creates columns exactly as defined by the template.
+    public async Task SeedColumnsFromEventAsync(Guid projectId,
+        IEnumerable<(string Name, string Type, int Position)> columns)
     {
-        private readonly AppDbContext _context;
+        var exists = await _db.KanbanColumns.AnyAsync(c => c.ProjectId == projectId);
+        if (exists) return;
 
-        public KanbanService(AppDbContext context)
+        var entities = columns.Select(c => new KanbanColumn
         {
-            _context = context;
-        }
+            Id        = Guid.NewGuid(),
+            ProjectId = projectId,
+            Name      = c.Name,
+            Type      = c.Type,
+            Position  = c.Position,
+        });
 
-        public async Task<KanbanBoard?> GetBoardByProjectAsync(Guid projectId)
+        _db.KanbanColumns.AddRange(entities);
+        await _db.SaveChangesAsync();
+    }
+
+    // Fallback: seeds 4-column blank board when no event was received yet.
+    public async Task SeedDefaultColumnsAsync(Guid projectId)
+    {
+        var exists = await _db.KanbanColumns.AnyAsync(c => c.ProjectId == projectId);
+        if (exists) return;
+
+        var defaults = new[]
         {
-            return await _context.KanbanBoards
-                .Include(b => b.Columns.OrderBy(c => c.Position))
-                .FirstOrDefaultAsync(b => b.ProjectId == projectId);
-        }
+            new KanbanColumn { Id = Guid.NewGuid(), ProjectId = projectId, Name = "Backlog",     Position = 0, Type = "backlog" },
+            new KanbanColumn { Id = Guid.NewGuid(), ProjectId = projectId, Name = "To Do",       Position = 1, Type = "active"  },
+            new KanbanColumn { Id = Guid.NewGuid(), ProjectId = projectId, Name = "In Progress", Position = 2, Type = "active"  },
+            new KanbanColumn { Id = Guid.NewGuid(), ProjectId = projectId, Name = "Done",        Position = 3, Type = "done"    },
+        };
+        _db.KanbanColumns.AddRange(defaults);
+        await _db.SaveChangesAsync();
+    }
 
-        public async Task<KanbanColumn?> GetColumnByIdAsync(Guid columnId)
+    public async Task<KanbanColumn> AddColumnAsync(Guid projectId, string name, string type = "custom")
+    {
+        var maxPos = await _db.KanbanColumns
+                              .Where(c => c.ProjectId == projectId)
+                              .Select(c => (int?)c.Position)
+                              .MaxAsync() ?? -1;
+
+        var col = new KanbanColumn
         {
-            return await _context.KanbanColumns.FindAsync(columnId);
-        }
+            Id        = Guid.NewGuid(),
+            ProjectId = projectId,
+            Name      = name,
+            Position  = maxPos + 1,
+            Type      = type
+        };
+        _db.KanbanColumns.Add(col);
+        await _db.SaveChangesAsync();
+        return col;
+    }
 
-        public async Task<KanbanBoard> CreateBoardAsync(Guid projectId, string name)
-        {
-            var board = new KanbanBoard
-            {
-                Id        = Guid.NewGuid(),
-                ProjectId = projectId,
-                Name      = name,
-                CreatedAt = DateTime.UtcNow
-            };
+    public async Task<KanbanColumn?> UpdateColumnAsync(Guid id, string name, string type)
+    {
+        var col = await _db.KanbanColumns.FindAsync(id);
+        if (col == null) return null;
+        col.Name = name;
+        col.Type = type;
+        await _db.SaveChangesAsync();
+        return col;
+    }
 
-            _context.KanbanBoards.Add(board);
+    public async Task<bool> DeleteColumnAsync(Guid id)
+    {
+        var col = await _db.KanbanColumns.FindAsync(id);
+        if (col == null) return false;
 
-            // Seed 5 columns mặc định với Type tương ứng theo schema
-            var defaultColumns = new[]
-            {
-                (Name: "Backlog",     Type: "backlog"),
-                (Name: "To Do",       Type: "active"),
-                (Name: "In Progress", Type: "active"),
-                (Name: "Review",      Type: "active"),
-                (Name: "Done",        Type: "done"),
-            };
+        var hasTask = await _db.Tasks.AnyAsync(t => t.ColumnId == id && t.DeletedAt == null);
+        if (hasTask) return false;
 
-            for (int i = 0; i < defaultColumns.Length; i++)
-            {
-                _context.KanbanColumns.Add(new KanbanColumn
-                {
-                    Id       = Guid.NewGuid(),
-                    BoardId  = board.Id,
-                    Name     = defaultColumns[i].Name,
-                    Type     = defaultColumns[i].Type,
-                    Position = i
-                });
-            }
-
-            await _context.SaveChangesAsync();
-            return board;
-        }
-
-        public async Task<KanbanColumn> AddColumnAsync(Guid boardId, string name, string type, int position)
-        {
-            var column = new KanbanColumn
-            {
-                Id       = Guid.NewGuid(),
-                BoardId  = boardId,
-                Name     = name,
-                Type     = type,
-                Position = position
-            };
-
-            _context.KanbanColumns.Add(column);
-            await _context.SaveChangesAsync();
-            return column;
-        }
-
-        // Xóa column chỉ thành công nếu không còn task nào (RESTRICT FK)
-        public async Task<bool> DeleteColumnAsync(Guid columnId)
-        {
-            var column = await _context.KanbanColumns.FindAsync(columnId);
-            if (column == null) return false;
-
-            var hasTask = await _context.Tasks.AnyAsync(t => t.ColumnId == columnId && t.DeletedAt == null);
-            if (hasTask) return false;
-
-            _context.KanbanColumns.Remove(column);
-            await _context.SaveChangesAsync();
-            return true;
-        }
+        _db.KanbanColumns.Remove(col);
+        await _db.SaveChangesAsync();
+        return true;
     }
 }

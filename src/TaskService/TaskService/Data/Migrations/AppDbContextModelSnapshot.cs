@@ -17,32 +17,10 @@ namespace TaskService.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.0")
+                .HasAnnotation("ProductVersion", "8.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("TaskService.Models.KanbanBoard", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("NEWID()");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("ProjectId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("KanbanBoards");
-                });
 
             modelBuilder.Entity("TaskService.Models.KanbanColumn", b =>
                 {
@@ -51,15 +29,16 @@ namespace TaskService.Data.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasDefaultValueSql("NEWID()");
 
-                    b.Property<Guid>("BoardId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("Position")
                         .HasColumnType("int");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -70,7 +49,7 @@ namespace TaskService.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BoardId");
+                    b.HasIndex("ProjectId");
 
                     b.ToTable("KanbanColumns");
                 });
@@ -82,71 +61,32 @@ namespace TaskService.Data.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasDefaultValueSql("NEWID()");
 
-                    b.Property<Guid?>("AssignedTo")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<decimal?>("EstimatedHours")
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
-                    b.Property<int>("Status")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
 
                     b.Property<Guid>("TaskId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("TaskId");
 
                     b.ToTable("SubTasks");
-                });
-
-            modelBuilder.Entity("TaskService.Models.TaskAssignmentHistory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("NEWID()");
-
-                    b.Property<DateTime>("ChangedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("ChangedBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("NewAssignee")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("PreviousAssignee")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("TaskId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TaskId");
-
-                    b.ToTable("TaskAssignmentHistories");
                 });
 
             modelBuilder.Entity("TaskService.Models.TaskItem", b =>
@@ -168,40 +108,42 @@ namespace TaskService.Data.Migrations
                     b.Property<Guid>("CreatedBy")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime?>("Deadline")
-                        .HasColumnType("datetime2");
-
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal?>("EstimatedHours")
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
                     b.Property<int>("Priority")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(1);
+                        .HasColumnType("int");
 
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("SprintId")
+                    b.Property<Guid?>("ReporterId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AssignedTo");
+
                     b.HasIndex("ColumnId");
+
+                    b.HasIndex("DeletedAt");
+
+                    b.HasIndex("ProjectId");
 
                     b.ToTable("Tasks", (string)null);
                 });
@@ -213,9 +155,6 @@ namespace TaskService.Data.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasDefaultValueSql("NEWID()");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
@@ -223,13 +162,13 @@ namespace TaskService.Data.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
-                    b.Property<Guid>("LoggedBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("LoggedDate")
+                    b.Property<DateTime>("LoggedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<Guid>("TaskId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -239,32 +178,10 @@ namespace TaskService.Data.Migrations
                     b.ToTable("TaskTimeLogs");
                 });
 
-            modelBuilder.Entity("TaskService.Models.KanbanColumn", b =>
-                {
-                    b.HasOne("TaskService.Models.KanbanBoard", "Board")
-                        .WithMany("Columns")
-                        .HasForeignKey("BoardId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Board");
-                });
-
             modelBuilder.Entity("TaskService.Models.SubTask", b =>
                 {
                     b.HasOne("TaskService.Models.TaskItem", "Task")
                         .WithMany("SubTasks")
-                        .HasForeignKey("TaskId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Task");
-                });
-
-            modelBuilder.Entity("TaskService.Models.TaskAssignmentHistory", b =>
-                {
-                    b.HasOne("TaskService.Models.TaskItem", "Task")
-                        .WithMany("AssignmentHistory")
                         .HasForeignKey("TaskId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -294,11 +211,6 @@ namespace TaskService.Data.Migrations
                     b.Navigation("Task");
                 });
 
-            modelBuilder.Entity("TaskService.Models.KanbanBoard", b =>
-                {
-                    b.Navigation("Columns");
-                });
-
             modelBuilder.Entity("TaskService.Models.KanbanColumn", b =>
                 {
                     b.Navigation("Tasks");
@@ -306,8 +218,6 @@ namespace TaskService.Data.Migrations
 
             modelBuilder.Entity("TaskService.Models.TaskItem", b =>
                 {
-                    b.Navigation("AssignmentHistory");
-
                     b.Navigation("SubTasks");
 
                     b.Navigation("TimeLogs");

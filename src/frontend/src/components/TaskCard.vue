@@ -29,7 +29,7 @@
         :class="task.done ? 'text-on-surface-variant line-through' : 'text-on-surface'">
         {{ task.title }}
       </h4>
-      <p class="font-label-md text-label-md text-outline mb-3">{{ task.id }}</p>
+      <p class="font-label-md text-label-md text-outline mb-3">#{{ task.shortId }}</p>
 
       <!-- Progress -->
       <div v-if="task.progress !== undefined" class="flex items-center gap-2 mb-3">
@@ -67,7 +67,9 @@
           <img v-if="task.avatar" :src="task.avatar"
             class="w-6 h-6 rounded-full border-2 border-surface-container-lowest object-cover" />
           <div v-if="task.avatarText"
-            class="w-6 h-6 rounded-full border-2 border-surface-container-lowest bg-primary text-on-primary flex items-center justify-center font-label-sm text-[10px]">
+            class="w-6 h-6 rounded-full border-2 border-surface-container-lowest text-white flex items-center justify-center font-label-sm text-[10px]"
+            :style="{ backgroundColor: task.avatarColor || '#3525cd' }"
+            :title="task.assignedName || ''">
             {{ task.avatarText }}
           </div>
           <div v-if="task.unassigned"

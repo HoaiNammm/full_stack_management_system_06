@@ -1,44 +1,66 @@
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Text;
+using TaskService.Configurations;
 using TaskService.Data;
 using TaskService.Events;
 using TaskService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add DbContext
+// DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add Services
-builder.Services.AddScoped<TaskItemService>();
-builder.Services.AddScoped<SubTaskService>();
+// Services
 builder.Services.AddScoped<KanbanService>();
-builder.Services.AddScoped<TaskTimeLogService>();
-
-// Event publisher (singleton – one RabbitMQ connection shared)
+builder.Services.AddScoped<TaskItemService>();
 builder.Services.AddSingleton<IEventPublisher, RabbitMqEventPublisher>();
+builder.Services.AddHttpClient<IProjectMembershipService, HttpProjectMembershipService>();
+builder.Services.AddHostedService<ProjectEventConsumer>();
 
-// Add CORS
+// JWT
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
+    ?? throw new Exception("JWT configuration is missing.");
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
+            ValidateIssuer           = true,
+            ValidIssuer              = jwtSettings.Issuer,
+            ValidateAudience         = true,
+            ValidAudience            = jwtSettings.Audience,
+            ValidateLifetime         = true,
+            ClockSkew                = TimeSpan.Zero
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowVue", policy =>
-    {
-        policy.WithOrigins("http://localhost:5173")
+        policy.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost")
               .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
+              .AllowAnyHeader());
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+        opts.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "TaskService API", Version = "v1" });
-
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name         = "Authorization",
@@ -48,7 +70,6 @@ builder.Services.AddSwaggerGen(c =>
         BearerFormat = "JWT",
         In           = ParameterLocation.Header
     });
-
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -61,46 +82,29 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// JWT Authentication
-var jwtSecret   = builder.Configuration["Jwt:Secret"];
-var jwtIssuer   = builder.Configuration["Jwt:Issuer"];
-var jwtAudience = builder.Configuration["Jwt:Audience"];
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.MapInboundClaims = false;
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret!)),
-            ValidateIssuer           = true,
-            ValidIssuer              = jwtIssuer,
-            ValidateAudience         = true,
-            ValidAudience            = jwtAudience,
-            ValidateLifetime         = true
-        };
-    });
-
 var app = builder.Build();
 
-// Run Migrations
+// Migrate / schema patch
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+
+    // Add SprintId if the column doesn't exist yet (no EF migrations baseline)
+    db.Database.ExecuteSqlRaw(@"
+        IF NOT EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_NAME = 'Tasks' AND COLUMN_NAME = 'SprintId'
+        )
+        BEGIN
+            ALTER TABLE Tasks ADD SprintId uniqueidentifier NULL;
+            CREATE INDEX IX_Tasks_SprintId ON Tasks (SprintId);
+        END");
 }
 
-// Use CORS
 app.UseCors("AllowVue");
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseHttpsRedirection();
+app.UseSwagger();
+app.UseSwaggerUI();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

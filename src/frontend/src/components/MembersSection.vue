@@ -49,9 +49,10 @@
             class="px-md py-sm rounded-lg border border-outline-variant font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high transition-colors">
             Hủy
           </button>
-          <button @click="handleAdd"
-            class="flex items-center gap-xs px-md py-sm rounded-lg bg-primary text-on-primary font-label-lg text-label-lg hover:opacity-90 transition-opacity">
-            <span class="material-symbols-outlined text-[18px]">person_add</span>
+          <button @click="handleAdd" :disabled="addLoading"
+            class="flex items-center gap-xs px-md py-sm rounded-lg bg-primary text-on-primary font-label-lg text-label-lg hover:opacity-90 transition-opacity disabled:opacity-60">
+            <span v-if="addLoading" class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+            <span v-else class="material-symbols-outlined text-[18px]">person_add</span>
             Thêm thành viên
           </button>
         </div>
@@ -120,68 +121,81 @@
 
 <script setup>
 import { ref } from 'vue'
+import { projectService, userService } from '../services/api'
 
 const props = defineProps(['project'])
-const emit = defineEmits(['event'])
+const emit  = defineEmits(['event', 'reload'])
 
-const members = ref(props.project.members.map(m => ({ ...m })))
+const members     = ref(props.project.members.map(m => ({ ...m })))
 const showAddForm = ref(false)
-const addError = ref('')
+const addError    = ref('')
+const addLoading  = ref(false)
 const editableRoles = ['Manager', 'Member', 'Viewer']
+const addForm = ref({ email: '', role: 'Member' })
 
-const addForm = ref({ email: '', name: '', role: 'Member' })
-
+const ROLE_INT = { Owner: 0, Manager: 1, Member: 2, Viewer: 3 }
+const ROLE_STR = ['Owner', 'Manager', 'Member', 'Viewer']
 const avatarColors = ['#3525cd', '#006a61', '#684000', '#ba1a1a', '#0f5e9c', '#6a0dad', '#2e7d32', '#e65100']
 
 const roleInfo = [
-  { name: 'Owner', style: 'bg-primary/10 text-primary', desc: 'Toàn quyền quản lý' },
-  { name: 'Manager', style: 'bg-secondary/10 text-secondary', desc: 'Quản lý task & sprint' },
-  { name: 'Member', style: 'bg-surface-container text-on-surface-variant', desc: 'Tham gia cập nhật task' },
-  { name: 'Viewer', style: 'bg-surface-container text-outline', desc: 'Chỉ xem' },
+  { name: 'Owner',   style: 'bg-primary/10 text-primary',             desc: 'Toàn quyền quản lý' },
+  { name: 'Manager', style: 'bg-secondary/10 text-secondary',         desc: 'Quản lý task & sprint' },
+  { name: 'Member',  style: 'bg-surface-container text-on-surface-variant', desc: 'Tham gia cập nhật task' },
+  { name: 'Viewer',  style: 'bg-surface-container text-outline',      desc: 'Chỉ xem' },
 ]
 
 function roleStyle(role) {
   return roleInfo.find(r => r.name === role)?.style || ''
 }
 
-function updateRole(member, newRole) {
+async function updateRole(member, newRole) {
+  const oldRole = member.role
   member.role = newRole
+  try {
+    await projectService.updateMemberRole(props.project.id, member.id, { role: ROLE_INT[newRole] ?? 2 })
+  } catch {
+    member.role = oldRole
+  }
 }
 
-function removeMember(m) {
+async function removeMember(m) {
   members.value = members.value.filter(x => x.id !== m.id)
+  try {
+    await projectService.removeMember(props.project.id, m.id)
+    emit('reload')
+  } catch {
+    members.value.push(m)
+  }
 }
 
-function handleAdd() {
+async function handleAdd() {
   addError.value = ''
-  if (!addForm.value.email.trim()) {
-    addError.value = 'Vui lòng nhập email'
-    return
-  }
+  if (!addForm.value.email.trim()) { addError.value = 'Vui lòng nhập email'; return }
   if (members.value.find(m => m.email === addForm.value.email)) {
-    addError.value = 'Email này đã là thành viên'
-    return
+    addError.value = 'Email này đã là thành viên'; return
   }
-  const m = {
-    id: Date.now(),
-    name: addForm.value.name || addForm.value.email.split('@')[0],
-    email: addForm.value.email,
-    role: addForm.value.role,
-    avatarColor: avatarColors[members.value.length % avatarColors.length],
-    joinedAt: new Date().toLocaleDateString('vi-VN'),
-  }
-  members.value.push(m)
-  showAddForm.value = false
-  addForm.value = { email: '', name: '', role: 'Member' }
 
-  // Publish event
-  emit('event', {
-    type: 'project.member.added',
-    icon: 'person_add',
-    iconBg: 'bg-secondary/10 text-secondary',
-    summary: `${m.name} được thêm vào dự án với vai trò ${m.role}`,
-    time: new Date().toLocaleTimeString('vi-VN'),
-  })
+  addLoading.value = true
+  try {
+    // Look up user by email
+    const allUsers = await userService.getAll()
+    const user = (allUsers || []).find(u => u.email?.toLowerCase() === addForm.value.email.toLowerCase())
+    if (!user) { addError.value = 'Không tìm thấy người dùng với email này'; return }
+
+    await projectService.addMember(props.project.id, { userId: user.id, role: ROLE_INT[addForm.value.role] ?? 2 })
+    showAddForm.value = false
+    addForm.value = { email: '', role: 'Member' }
+    emit('event', {
+      type: 'project.member.added', icon: 'person_add', iconBg: 'bg-secondary/10 text-secondary',
+      summary: `${user.fullName || user.email} được thêm với vai trò ${addForm.value.role}`,
+      time: new Date().toLocaleTimeString('vi-VN'),
+    })
+    emit('reload')
+  } catch (e) {
+    addError.value = e.response?.data?.message || 'Không thể thêm thành viên'
+  } finally {
+    addLoading.value = false
+  }
 }
 </script>
 

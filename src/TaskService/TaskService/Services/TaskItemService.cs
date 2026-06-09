@@ -3,144 +3,104 @@ using TaskService.Data;
 using TaskService.Events;
 using TaskService.Models;
 
-namespace TaskService.Services
+namespace TaskService.Services;
+
+public class TaskItemService
 {
-    public class TaskItemService
+    private readonly AppDbContext      _db;
+    private readonly IEventPublisher   _events;
+
+    public TaskItemService(AppDbContext db, IEventPublisher events)
     {
-        private readonly AppDbContext _context;
-        private readonly IEventPublisher _eventPublisher;
+        _db     = db;
+        _events = events;
+    }
 
-        public TaskItemService(AppDbContext context, IEventPublisher eventPublisher)
+    public async Task<List<TaskItem>> GetAllAsync(
+        Guid? projectId  = null,
+        Guid? columnId   = null,
+        Guid? assignedTo = null,
+        Guid? sprintId   = null)
+    {
+        var q = _db.Tasks.Where(t => t.DeletedAt == null);
+
+        if (projectId.HasValue)  q = q.Where(t => t.ProjectId  == projectId.Value);
+        if (columnId.HasValue)   q = q.Where(t => t.ColumnId   == columnId.Value);
+        if (assignedTo.HasValue) q = q.Where(t => t.AssignedTo == assignedTo.Value);
+        if (sprintId.HasValue)   q = q.Where(t => t.SprintId   == sprintId.Value);
+
+        return await q.OrderBy(t => t.CreatedAt).ToListAsync();
+    }
+
+    public async Task<TaskItem?> GetByIdAsync(Guid id)
+        => await _db.Tasks
+                    .Include(t => t.SubTasks.Where(s => s.DeletedAt == null))
+                    .FirstOrDefaultAsync(t => t.Id == id && t.DeletedAt == null);
+
+    public async Task<TaskItem> CreateAsync(TaskItem task, Guid createdBy)
+    {
+        task.Id        = Guid.NewGuid();
+        task.CreatedAt = DateTime.UtcNow;
+        task.CreatedBy = createdBy;
+        _db.Tasks.Add(task);
+        await _db.SaveChangesAsync();
+        return task;
+    }
+
+    public async Task<TaskItem?> UpdateAsync(Guid id, string title, string? description,
+        int priority, Guid? assignedTo, DateTime? dueDate, decimal? estimatedHours,
+        Guid? sprintId = null, bool clearSprint = false)
+    {
+        var task = await _db.Tasks.FindAsync(id);
+        if (task == null || task.DeletedAt != null) return null;
+
+        task.Title          = title;
+        task.Description    = description;
+        task.Priority       = priority;
+        task.AssignedTo     = assignedTo;
+        task.DueDate        = dueDate;
+        task.EstimatedHours = estimatedHours;
+        if (sprintId.HasValue) task.SprintId = sprintId.Value;
+        if (clearSprint)       task.SprintId = null;
+        await _db.SaveChangesAsync();
+        return task;
+    }
+
+    public async Task<TaskItem?> MoveToColumnAsync(Guid id, Guid newColumnId, Guid movedBy)
+    {
+        var task = await _db.Tasks
+                            .FirstOrDefaultAsync(t => t.Id == id && t.DeletedAt == null);
+        if (task == null) return null;
+
+        var newCol = await _db.KanbanColumns.FindAsync(newColumnId);
+        if (newCol == null) return null;
+
+        var oldColumnId = task.ColumnId;
+        task.ColumnId   = newColumnId;
+        await _db.SaveChangesAsync();
+
+        await _events.PublishAsync("task_events", "task.column.changed", new TaskColumnChangedEvent
         {
-            _context        = context;
-            _eventPublisher = eventPublisher;
-        }
+            TaskId        = task.Id,
+            ProjectId     = task.ProjectId,
+            TaskTitle     = task.Title,
+            NewColumnType = newCol.Type,
+            OldColumnId   = oldColumnId,
+            NewColumnId   = newColumnId,
+            AssignedTo    = task.AssignedTo,
+            ChangedBy     = movedBy,
+            ChangedAt     = DateTime.UtcNow
+        });
 
-        public async Task<List<TaskItem>> GetTasksAsync(Guid? projectId, Guid? sprintId, Guid? assignedTo, Guid? columnId)
-        {
-            var query = _context.Tasks
-                .Where(t => t.DeletedAt == null)
-                .AsQueryable();
+        return task;
+    }
 
-            if (projectId.HasValue)  query = query.Where(t => t.ProjectId == projectId.Value);
-            if (sprintId.HasValue)   query = query.Where(t => t.SprintId == sprintId.Value);
-            if (assignedTo.HasValue) query = query.Where(t => t.AssignedTo == assignedTo.Value);
-            if (columnId.HasValue)   query = query.Where(t => t.ColumnId == columnId.Value);
-
-            return await query.OrderByDescending(t => t.CreatedAt).ToListAsync();
-        }
-
-        public async Task<TaskItem?> GetTaskByIdAsync(Guid id)
-        {
-            return await _context.Tasks
-                .Include(t => t.Column)
-                .Include(t => t.SubTasks.Where(s => s.DeletedAt == null))
-                .Include(t => t.TimeLogs)
-                .Include(t => t.AssignmentHistory)
-                .FirstOrDefaultAsync(t => t.Id == id && t.DeletedAt == null);
-        }
-
-        public async Task<TaskItem> CreateTaskAsync(TaskItem task)
-        {
-            _context.Tasks.Add(task);
-            await _context.SaveChangesAsync();
-            return task;
-        }
-
-        public async Task<TaskItem?> UpdateTaskAsync(Guid id, string title, string? description,
-            Guid? sprintId, int priority, decimal? estimatedHours, DateTime? deadline)
-        {
-            var task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == id && t.DeletedAt == null);
-            if (task == null) return null;
-
-            task.Title          = title;
-            task.Description    = description;
-            task.SprintId       = sprintId;
-            task.Priority       = priority;
-            task.EstimatedHours = estimatedHours;
-            task.Deadline       = deadline;
-            task.UpdatedAt      = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-            return task;
-        }
-
-        public async Task<TaskItem?> MoveToColumnAsync(Guid id, Guid newColumnId, Guid movedBy)
-        {
-            var task = await _context.Tasks
-                .Include(t => t.Column)
-                .FirstOrDefaultAsync(t => t.Id == id && t.DeletedAt == null);
-            if (task == null) return null;
-
-            var newColumn = await _context.KanbanColumns.FindAsync(newColumnId);
-            if (newColumn == null) return null;
-
-            var oldColumnId = task.ColumnId;
-            task.ColumnId  = newColumnId;
-            task.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
-            await _eventPublisher.PublishAsync("task.column.changed", new TaskColumnChangedEvent
-            {
-                TaskId        = task.Id,
-                ProjectId     = task.ProjectId,
-                TaskTitle     = task.Title,
-                OldColumnId   = oldColumnId,
-                NewColumnId   = newColumnId,
-                NewColumnType = newColumn.Type,
-                AssignedTo    = task.AssignedTo,
-                ChangedBy     = movedBy,
-                ChangedAt     = DateTime.UtcNow
-            });
-
-            return task;
-        }
-
-        public async Task<TaskItem?> AssignTaskAsync(Guid id, Guid? newAssignee, Guid assignedBy)
-        {
-            var task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == id && t.DeletedAt == null);
-            if (task == null) return null;
-
-            var previousAssignee = task.AssignedTo;
-            task.AssignedTo = newAssignee;
-            task.UpdatedAt  = DateTime.UtcNow;
-
-            _context.TaskAssignmentHistories.Add(new TaskAssignmentHistory
-            {
-                Id               = Guid.NewGuid(),
-                TaskId           = task.Id,
-                PreviousAssignee = previousAssignee,
-                NewAssignee      = newAssignee,
-                ChangedBy        = assignedBy,
-                ChangedAt        = DateTime.UtcNow
-            });
-
-            await _context.SaveChangesAsync();
-
-            await _eventPublisher.PublishAsync("task.assigned", new TaskAssignedEvent
-            {
-                TaskId           = task.Id,
-                ProjectId        = task.ProjectId,
-                TaskTitle        = task.Title,
-                PreviousAssignee = previousAssignee,
-                NewAssignee      = newAssignee,
-                AssignedBy       = assignedBy,
-                AssignedAt       = DateTime.UtcNow
-            });
-
-            return task;
-        }
-
-        // Soft delete
-        public async Task<bool> DeleteTaskAsync(Guid id)
-        {
-            var task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == id && t.DeletedAt == null);
-            if (task == null) return false;
-
-            task.DeletedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-            return true;
-        }
+    public async Task<bool> DeleteAsync(Guid id)
+    {
+        var task = await _db.Tasks.FindAsync(id);
+        if (task == null || task.DeletedAt != null) return false;
+        task.DeletedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return true;
     }
 }

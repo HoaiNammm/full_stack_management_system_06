@@ -1,83 +1,74 @@
-using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
+using RabbitMQ.Client;
 
-namespace TaskService.Events
+namespace TaskService.Events;
+
+public class RabbitMqEventPublisher : IEventPublisher, IDisposable
 {
-    public class RabbitMqEventPublisher : IEventPublisher, IDisposable
+    private IConnection? _connection;
+    private IModel?      _channel;
+    private readonly ILogger<RabbitMqEventPublisher> _logger;
+    private readonly IConfiguration _config;
+
+    public RabbitMqEventPublisher(ILogger<RabbitMqEventPublisher> logger, IConfiguration config)
     {
-        private readonly IConnection? _connection;
-        private readonly IModel? _channel;
-        private readonly ILogger<RabbitMqEventPublisher> _logger;
-        private const string ExchangeName = "task_events";
+        _logger = logger;
+        _config = config;
+        TryConnect();
+    }
 
-        public RabbitMqEventPublisher(IConfiguration configuration, ILogger<RabbitMqEventPublisher> logger)
+    private void TryConnect()
+    {
+        try
         {
-            _logger = logger;
-            try
+            var factory = new ConnectionFactory
             {
-                var factory = new ConnectionFactory
-                {
-                    HostName    = configuration["RabbitMQ:Host"] ?? "localhost",
-                    Port        = int.Parse(configuration["RabbitMQ:Port"] ?? "5672"),
-                    UserName    = configuration["RabbitMQ:Username"] ?? "guest",
-                    Password    = configuration["RabbitMQ:Password"] ?? "guest",
-                    VirtualHost = configuration["RabbitMQ:VirtualHost"] ?? "/"
-                };
+                HostName    = _config["RabbitMQ:Host"]     ?? "localhost",
+                Port        = int.Parse(_config["RabbitMQ:Port"] ?? "5672"),
+                UserName    = _config["RabbitMQ:Username"] ?? "guest",
+                Password    = _config["RabbitMQ:Password"] ?? "guest",
+                VirtualHost = _config["RabbitMQ:VirtualHost"] ?? "/"
+            };
+            _connection = factory.CreateConnection();
+            _channel    = _connection.CreateModel();
 
-                _connection = factory.CreateConnection();
-                _channel    = _connection.CreateModel();
+            _channel.ExchangeDeclare("task_events",    ExchangeType.Topic, durable: true);
+            _channel.ExchangeDeclare("project_events", ExchangeType.Topic, durable: true);
 
-                _channel.ExchangeDeclare(
-                    exchange:   ExchangeName,
-                    type:       ExchangeType.Topic,
-                    durable:    true,
-                    autoDelete: false);
-
-                _logger.LogInformation("RabbitMQ connected to {Host}", factory.HostName);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "RabbitMQ unavailable – events will be logged only");
-            }
+            _logger.LogInformation("RabbitMQ connected.");
         }
-
-        public System.Threading.Tasks.Task PublishAsync<T>(string eventType, T payload)
+        catch (Exception ex)
         {
-            var message = JsonSerializer.Serialize(new
-            {
-                EventType  = eventType,
-                OccurredAt = DateTime.UtcNow,
-                Payload    = payload
-            });
-
-            if (_channel is { IsOpen: true })
-            {
-                var body  = Encoding.UTF8.GetBytes(message);
-                var props = _channel.CreateBasicProperties();
-                props.Persistent  = true;
-                props.ContentType = "application/json";
-
-                _channel.BasicPublish(
-                    exchange:        ExchangeName,
-                    routingKey:      eventType,
-                    basicProperties: props,
-                    body:            body);
-
-                _logger.LogInformation("Event published: {EventType}", eventType);
-            }
-            else
-            {
-                _logger.LogWarning("Event not published (RabbitMQ offline): {EventType} | {Payload}", eventType, message);
-            }
-
-            return System.Threading.Tasks.Task.CompletedTask;
+            _logger.LogWarning("RabbitMQ unavailable — events will be skipped. {Msg}", ex.Message);
         }
+    }
 
-        public void Dispose()
+    public Task PublishAsync<T>(string exchange, string routingKey, T message)
+    {
+        if (_channel == null || !_channel.IsOpen)
         {
-            _channel?.Close();
-            _connection?.Close();
+            _logger.LogWarning("RabbitMQ not connected — skipping event {Key}", routingKey);
+            return Task.CompletedTask;
         }
+        try
+        {
+            var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
+            var props = _channel.CreateBasicProperties();
+            props.Persistent = true;
+            props.ContentType = "application/json";
+            _channel.BasicPublish(exchange, routingKey, props, body);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Failed to publish event {Key}: {Msg}", routingKey, ex.Message);
+        }
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        _channel?.Close();
+        _connection?.Close();
     }
 }

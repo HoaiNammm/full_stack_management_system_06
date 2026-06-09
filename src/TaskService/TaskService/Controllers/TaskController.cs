@@ -3,152 +3,188 @@ using Microsoft.AspNetCore.Mvc;
 using TaskService.Models;
 using TaskService.Services;
 
-namespace TaskService.Controllers
+namespace TaskService.Controllers;
+
+[ApiController]
+[Route("api/tasks")]
+public class TaskController : ControllerBase
 {
-    [ApiController]
-    [Route("api/tasks")]
-    public class TaskController : ControllerBase
+    private readonly TaskItemService           _taskService;
+    private readonly KanbanService             _kanbanService;
+    private readonly IProjectMembershipService _membership;
+
+    public TaskController(
+        TaskItemService           taskService,
+        KanbanService             kanbanService,
+        IProjectMembershipService membership)
     {
-        private readonly TaskItemService _taskService;
-
-        public TaskController(TaskItemService taskService)
-        {
-            _taskService = taskService;
-        }
-
-        [Authorize]
-        [HttpGet]
-        public async Task<IActionResult> GetTasks(
-            [FromQuery] Guid? projectId,
-            [FromQuery] Guid? sprintId,
-            [FromQuery] Guid? assignedTo,
-            [FromQuery] Guid? columnId)
-        {
-            var tasks = await _taskService.GetTasksAsync(projectId, sprintId, assignedTo, columnId);
-            return Ok(new { success = true, data = tasks });
-        }
-
-        [Authorize]
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetTask(Guid id)
-        {
-            var task = await _taskService.GetTaskByIdAsync(id);
-            if (task == null)
-                return NotFound(new { success = false, error = new { code = "TASK_NOT_FOUND" } });
-
-            return Ok(new { success = true, data = task });
-        }
-
-        [Authorize]
-        [HttpPost]
-        public async Task<IActionResult> CreateTask([FromBody] CreateTaskRequest request)
-        {
-            var userId = User.FindFirst("sub")?.Value;
-
-            var task = new TaskItem
-            {
-                Id             = Guid.NewGuid(),
-                ProjectId      = request.ProjectId,
-                SprintId       = request.SprintId,
-                ColumnId       = request.ColumnId,
-                Title          = request.Title,
-                Description    = request.Description,
-                AssignedTo     = request.AssignedTo,
-                Priority       = request.Priority,
-                EstimatedHours = request.EstimatedHours,
-                Deadline       = request.Deadline,
-                CreatedBy      = Guid.Parse(userId!),
-                CreatedAt      = DateTime.UtcNow
-            };
-
-            await _taskService.CreateTaskAsync(task);
-            return CreatedAtAction(nameof(GetTask), new { id = task.Id },
-                new { success = true, data = task });
-        }
-
-        [Authorize]
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTask(Guid id, [FromBody] UpdateTaskRequest request)
-        {
-            var task = await _taskService.UpdateTaskAsync(
-                id, request.Title, request.Description, request.SprintId,
-                request.Priority, request.EstimatedHours, request.Deadline);
-
-            if (task == null)
-                return NotFound(new { success = false, error = new { code = "TASK_NOT_FOUND" } });
-
-            return Ok(new { success = true, data = task });
-        }
-
-        // Kéo task sang column khác trên Kanban board
-        [Authorize]
-        [HttpPut("{id}/column")]
-        public async Task<IActionResult> MoveToColumn(Guid id, [FromBody] MoveToColumnRequest request)
-        {
-            var userId = User.FindFirst("sub")?.Value;
-            var task = await _taskService.MoveToColumnAsync(id, request.ColumnId, Guid.Parse(userId!));
-
-            if (task == null)
-                return NotFound(new { success = false, error = new { code = "TASK_OR_COLUMN_NOT_FOUND" } });
-
-            return Ok(new { success = true, data = task });
-        }
-
-        [Authorize]
-        [HttpPut("{id}/assign")]
-        public async Task<IActionResult> AssignTask(Guid id, [FromBody] AssignTaskRequest request)
-        {
-            var userId = User.FindFirst("sub")?.Value;
-            var task = await _taskService.AssignTaskAsync(id, request.AssignedTo, Guid.Parse(userId!));
-
-            if (task == null)
-                return NotFound(new { success = false, error = new { code = "TASK_NOT_FOUND" } });
-
-            return Ok(new { success = true, data = task });
-        }
-
-        [Authorize]
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteTask(Guid id)
-        {
-            var success = await _taskService.DeleteTaskAsync(id);
-            if (!success)
-                return NotFound(new { success = false, error = new { code = "TASK_NOT_FOUND" } });
-
-            return Ok(new { success = true });
-        }
+        _taskService   = taskService;
+        _kanbanService = kanbanService;
+        _membership    = membership;
     }
 
-    public class CreateTaskRequest
+    [Authorize]
+    [HttpGet]
+    public async Task<IActionResult> GetTasks(
+        [FromQuery] Guid?  projectId,
+        [FromQuery] Guid?  columnId,
+        [FromQuery] Guid?  assignedTo,
+        [FromQuery] Guid?  sprintId)
     {
-        public Guid ProjectId { get; set; }
-        public Guid? SprintId { get; set; }
-        public Guid ColumnId { get; set; }
-        public string Title { get; set; } = string.Empty;
-        public string? Description { get; set; }
-        public Guid? AssignedTo { get; set; }
-        public int Priority { get; set; } = 1; // Medium default
-        public decimal? EstimatedHours { get; set; }
-        public DateTime? Deadline { get; set; }
+        if (projectId.HasValue)
+        {
+            var userId = GetCurrentUserId();
+            var token  = GetJwtToken();
+            if (!await _membership.IsMemberAsync(projectId.Value, userId, token))
+                return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+        }
+
+        var tasks = await _taskService.GetAllAsync(projectId, columnId, assignedTo, sprintId);
+        return Ok(new { success = true, data = tasks });
     }
 
-    public class UpdateTaskRequest
+    [Authorize]
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetTask(Guid id)
     {
-        public string Title { get; set; } = string.Empty;
-        public string? Description { get; set; }
-        public Guid? SprintId { get; set; }
-        public int Priority { get; set; }
-        public decimal? EstimatedHours { get; set; }
-        public DateTime? Deadline { get; set; }
+        var task = await _taskService.GetByIdAsync(id);
+        if (task == null)
+            return NotFound(new { success = false, error = new { code = "TASK_NOT_FOUND" } });
+
+        var userId = GetCurrentUserId();
+        var token  = GetJwtToken();
+        if (!await _membership.IsMemberAsync(task.ProjectId, userId, token))
+            return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
+        return Ok(new { success = true, data = task });
     }
 
-    public class MoveToColumnRequest
+    [Authorize]
+    [HttpPost]
+    public async Task<IActionResult> CreateTask([FromBody] CreateTaskRequest req)
     {
-        public Guid ColumnId { get; set; }
+        var userId = GetCurrentUserId();
+        var token  = GetJwtToken();
+
+        if (!await _membership.IsMemberAsync(req.ProjectId, userId, token))
+            return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
+        var col = await _kanbanService.GetColumnByIdAsync(req.ColumnId);
+        if (col == null)
+        {
+            await _kanbanService.SeedDefaultColumnsAsync(req.ProjectId);
+            var cols = await _kanbanService.GetColumnsByProjectAsync(req.ProjectId);
+            col = cols.FirstOrDefault();
+            if (col == null)
+                return BadRequest(new { success = false, error = new { code = "COLUMN_NOT_FOUND" } });
+        }
+
+        var task = new TaskItem
+        {
+            ProjectId      = req.ProjectId,
+            ColumnId       = col.Id,
+            Title          = req.Title,
+            Description    = req.Description,
+            Priority       = req.Priority,
+            AssignedTo     = req.AssignedTo,
+            DueDate        = req.DueDate,
+            EstimatedHours = req.EstimatedHours,
+            SprintId       = req.SprintId,
+        };
+
+        var created = await _taskService.CreateAsync(task, userId);
+        return Ok(new { success = true, data = created });
     }
 
-    public class AssignTaskRequest
+    [Authorize]
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateTask(Guid id, [FromBody] UpdateTaskRequest req)
     {
-        public Guid? AssignedTo { get; set; }
+        var existing = await _taskService.GetByIdAsync(id);
+        if (existing == null)
+            return NotFound(new { success = false, error = new { code = "TASK_NOT_FOUND" } });
+
+        var userId = GetCurrentUserId();
+        var token  = GetJwtToken();
+        if (!await _membership.IsMemberAsync(existing.ProjectId, userId, token))
+            return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
+        var task = await _taskService.UpdateAsync(
+            id, req.Title, req.Description, req.Priority,
+            req.AssignedTo, req.DueDate, req.EstimatedHours,
+            req.SprintId, req.ClearSprint);
+
+        return Ok(new { success = true, data = task });
     }
+
+    [Authorize]
+    [HttpPut("{id}/column")]
+    public async Task<IActionResult> MoveToColumn(Guid id, [FromBody] MoveToColumnRequest req)
+    {
+        var existing = await _taskService.GetByIdAsync(id);
+        if (existing == null)
+            return NotFound(new { success = false, error = new { code = "TASK_NOT_FOUND" } });
+
+        var userId = GetCurrentUserId();
+        var token  = GetJwtToken();
+        if (!await _membership.IsMemberAsync(existing.ProjectId, userId, token))
+            return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
+        var task = await _taskService.MoveToColumnAsync(id, req.ColumnId, userId);
+        if (task == null)
+            return NotFound(new { success = false, error = new { code = "TASK_OR_COLUMN_NOT_FOUND" } });
+
+        return Ok(new { success = true, data = task });
+    }
+
+    [Authorize]
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteTask(Guid id)
+    {
+        var existing = await _taskService.GetByIdAsync(id);
+        if (existing == null)
+            return NotFound(new { success = false, error = new { code = "TASK_NOT_FOUND" } });
+
+        var userId = GetCurrentUserId();
+        var token  = GetJwtToken();
+        if (!await _membership.IsMemberAsync(existing.ProjectId, userId, token))
+            return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
+        var ok = await _taskService.DeleteAsync(id);
+        return Ok(new { success = true });
+    }
+
+    private Guid   GetCurrentUserId() => Guid.Parse(User.FindFirst("sub")!.Value);
+    private string GetJwtToken()      =>
+        HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+}
+
+public class CreateTaskRequest
+{
+    public Guid      ProjectId       { get; set; }
+    public Guid      ColumnId        { get; set; }
+    public string    Title           { get; set; } = string.Empty;
+    public string?   Description     { get; set; }
+    public int       Priority        { get; set; } = 2;
+    public Guid?     AssignedTo      { get; set; }
+    public DateTime? DueDate         { get; set; }
+    public decimal?  EstimatedHours  { get; set; }
+    public Guid?     SprintId        { get; set; }
+}
+
+public class UpdateTaskRequest
+{
+    public string    Title           { get; set; } = string.Empty;
+    public string?   Description     { get; set; }
+    public int       Priority        { get; set; } = 2;
+    public Guid?     AssignedTo      { get; set; }
+    public DateTime? DueDate         { get; set; }
+    public decimal?  EstimatedHours  { get; set; }
+    public Guid?     SprintId        { get; set; }
+    public bool      ClearSprint     { get; set; } = false;
+}
+
+public class MoveToColumnRequest
+{
+    public Guid ColumnId { get; set; }
 }

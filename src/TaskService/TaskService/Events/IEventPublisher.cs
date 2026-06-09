@@ -1,7 +1,6 @@
-namespace TaskService.Events
+namespace TaskService.Events;
+
+public interface IEventPublisher
 {
-    public interface IEventPublisher
-    {
-        System.Threading.Tasks.Task PublishAsync<T>(string eventType, T payload);
-    }
+    Task PublishAsync<T>(string exchange, string routingKey, T message);
 }

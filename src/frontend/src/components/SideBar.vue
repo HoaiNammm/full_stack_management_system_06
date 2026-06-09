@@ -20,7 +20,8 @@
           ? 'text-primary font-bold border-r-4 border-primary bg-primary/10'
           : 'text-on-surface-variant hover:text-primary hover:bg-surface-container-high'"
       >
-        <span class="material-symbols-outlined" :style="{ fontVariationSettings: $route.path === '/dashboard' ? `'FILL' 1` : `'FILL' 0` }">dashboard</span>
+        <span class="material-symbols-outlined"
+          :style="{ fontVariationSettings: $route.path === '/dashboard' ? `'FILL' 1` : `'FILL' 0` }">dashboard</span>
         <span class="font-label-lg text-label-lg">Tổng quan</span>
       </RouterLink>
 
@@ -43,19 +44,38 @@
           ? 'text-primary font-bold border-r-4 border-primary bg-primary/10'
           : 'text-on-surface-variant hover:text-primary hover:bg-surface-container-high'"
       >
-        <span class="material-symbols-outlined" :style="{ fontVariationSettings: $route.path === '/kanban' ? `'FILL' 1` : `'FILL' 0` }">view_kanban</span>
+        <span class="material-symbols-outlined"
+          :style="{ fontVariationSettings: $route.path === '/kanban' ? `'FILL' 1` : `'FILL' 0` }">view_kanban</span>
         <span class="font-label-lg text-label-lg">Bảng Kanban</span>
       </RouterLink>
 
-      <a href="#" class="flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors duration-200 cursor-pointer active:scale-95">
-        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0">notifications</span>
-        <span class="font-label-lg text-label-lg">Thông báo</span>
-      </a>
+      <RouterLink
+        to="/calendar"
+        class="flex items-center gap-sm px-sm py-sm rounded-lg transition-all active:scale-95"
+        :class="$route.path === '/calendar'
+          ? 'text-primary font-bold border-r-4 border-primary bg-primary/10'
+          : 'text-on-surface-variant hover:text-primary hover:bg-surface-container-high'"
+      >
+        <span class="material-symbols-outlined"
+          :style="{ fontVariationSettings: $route.path === '/calendar' ? `'FILL' 1` : `'FILL' 0` }">calendar_month</span>
+        <span class="font-label-lg text-label-lg">Lịch</span>
+      </RouterLink>
 
-      <a href="#" class="flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors duration-200 cursor-pointer active:scale-95">
-        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0">settings</span>
+      <RouterLink to="/notifications"
+        class="flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors duration-200 cursor-pointer active:scale-95"
+        :class="{ 'text-primary bg-secondary-container': $route.path === '/notifications' }">
+        <span class="material-symbols-outlined"
+          :style="{ fontVariationSettings: $route.path === '/notifications' ? `'FILL' 1` : `'FILL' 0` }">notifications</span>
+        <span class="font-label-lg text-label-lg">Thông báo</span>
+      </RouterLink>
+
+      <RouterLink to="/settings"
+        class="flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors duration-200 cursor-pointer active:scale-95"
+        :class="{ 'text-primary bg-secondary-container': $route.path === '/settings' }">
+        <span class="material-symbols-outlined"
+          :style="{ fontVariationSettings: $route.path === '/settings' ? `'FILL' 1` : `'FILL' 0` }">settings</span>
         <span class="font-label-lg text-label-lg">Cài đặt</span>
-      </a>
+      </RouterLink>
     </div>
 
     <!-- CTA -->
