@@ -59,5 +59,12 @@ namespace ProjectService.Services
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<int?> GetUserRoleInProjectAsync(Guid projectId, Guid userId)
+        {
+            var member = await _context.Members
+                .FirstOrDefaultAsync(m => m.ProjectId == projectId && m.UserId == userId);
+            return member?.Role;
+        }
     }
 }

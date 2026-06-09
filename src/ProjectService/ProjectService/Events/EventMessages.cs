@@ -1,5 +1,20 @@
 namespace ProjectService.Events
 {
+    // project.created
+    public class ProjectCreatedEvent
+    {
+        public Guid   ProjectId  { get; set; }
+        public string TemplateId { get; set; } = string.Empty;
+        public List<ColumnDefinition> Columns { get; set; } = new();
+    }
+
+    public class ColumnDefinition
+    {
+        public string Name     { get; set; } = string.Empty;
+        public string Type     { get; set; } = string.Empty;
+        public int    Position { get; set; }
+    }
+
     // project.member.added
     public class MemberAddedEvent
     {

@@ -9,17 +9,24 @@ namespace ProjectService.Controllers
     [Route("api/projects/{projectId}/sprints")]
     public class SprintController : ControllerBase
     {
-        private readonly SprintService _sprintService;
+        private readonly SprintService  _sprintService;
+        private readonly MemberService  _memberService;
 
-        public SprintController(SprintService sprintService)
+        public SprintController(SprintService sprintService, MemberService memberService)
         {
             _sprintService = sprintService;
+            _memberService = memberService;
         }
 
         [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetSprints(Guid projectId)
         {
+            var userId = GetCurrentUserId();
+            var role   = await _memberService.GetUserRoleInProjectAsync(projectId, userId);
+            if (role == null)
+                return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
             var sprints = await _sprintService.GetSprintsByProjectAsync(projectId);
             return Ok(new { success = true, data = sprints });
         }
@@ -28,6 +35,11 @@ namespace ProjectService.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetSprint(Guid projectId, Guid id)
         {
+            var userId = GetCurrentUserId();
+            var role   = await _memberService.GetUserRoleInProjectAsync(projectId, userId);
+            if (role == null)
+                return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
             var sprint = await _sprintService.GetSprintByIdAsync(id);
             if (sprint == null || sprint.ProjectId != projectId)
                 return NotFound(new { success = false, error = new { code = "SPRINT_NOT_FOUND" } });
@@ -39,6 +51,13 @@ namespace ProjectService.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateSprint(Guid projectId, [FromBody] CreateSprintRequest request)
         {
+            var userId = GetCurrentUserId();
+            var role   = await _memberService.GetUserRoleInProjectAsync(projectId, userId);
+
+            // Owner (0) or Manager (1) can create sprints
+            if (role == null || role > 1)
+                return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
             var sprint = new Sprint
             {
                 Id          = Guid.NewGuid(),
@@ -47,7 +66,6 @@ namespace ProjectService.Controllers
                 Description = request.Description,
                 Goal        = request.Goal,
                 StartDate   = request.StartDate,
-                // EndDate auto-computed in service (StartDate + 14 days)
                 Status      = 0,
                 CreatedAt   = DateTime.UtcNow
             };
@@ -58,8 +76,16 @@ namespace ProjectService.Controllers
 
         [Authorize]
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSprint(Guid projectId, Guid id, [FromBody] UpdateSprintRequest request)
+        public async Task<IActionResult> UpdateSprint(Guid projectId, Guid id,
+            [FromBody] UpdateSprintRequest request)
         {
+            var userId = GetCurrentUserId();
+            var role   = await _memberService.GetUserRoleInProjectAsync(projectId, userId);
+
+            // Owner (0) or Manager (1) can update sprints
+            if (role == null || role > 1)
+                return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
             var sprint = await _sprintService.UpdateSprintAsync(
                 id, request.Name, request.Description, request.Goal,
                 request.StartDate, request.EndDate, request.Status);
@@ -73,20 +99,30 @@ namespace ProjectService.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSprint(Guid projectId, Guid id)
         {
+            var userId = GetCurrentUserId();
+            var role   = await _memberService.GetUserRoleInProjectAsync(projectId, userId);
+
+            // Owner (0) or Manager (1) can delete sprints
+            if (role == null || role > 1)
+                return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
             var success = await _sprintService.DeleteSprintAsync(id);
             if (!success)
                 return NotFound(new { success = false, error = new { code = "SPRINT_NOT_FOUND" } });
 
             return Ok(new { success = true });
         }
+
+        private Guid GetCurrentUserId() =>
+            Guid.Parse(User.FindFirst("sub")!.Value);
     }
 
     public class CreateSprintRequest
     {
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
-        public string? Goal { get; set; }         // Sprint objective
-        public DateTime StartDate { get; set; }   // EndDate auto = StartDate + 14 days
+        public string? Goal { get; set; }
+        public DateTime StartDate { get; set; }
     }
 
     public class UpdateSprintRequest
@@ -96,6 +132,6 @@ namespace ProjectService.Controllers
         public string? Goal { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
-        public int Status { get; set; }           // Set to 1 to publish sprint.started event
+        public int Status { get; set; }
     }
 }

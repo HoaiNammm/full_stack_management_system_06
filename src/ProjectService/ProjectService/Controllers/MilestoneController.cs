@@ -10,16 +10,23 @@ namespace ProjectService.Controllers
     public class MilestoneController : ControllerBase
     {
         private readonly MilestoneService _milestoneService;
+        private readonly MemberService    _memberService;
 
-        public MilestoneController(MilestoneService milestoneService)
+        public MilestoneController(MilestoneService milestoneService, MemberService memberService)
         {
             _milestoneService = milestoneService;
+            _memberService    = memberService;
         }
 
         [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetMilestones(Guid projectId)
         {
+            var userId = GetCurrentUserId();
+            var role   = await _memberService.GetUserRoleInProjectAsync(projectId, userId);
+            if (role == null)
+                return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
             var milestones = await _milestoneService.GetMilestonesByProjectAsync(projectId);
             return Ok(new { success = true, data = milestones });
         }
@@ -28,6 +35,11 @@ namespace ProjectService.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetMilestone(Guid projectId, Guid id)
         {
+            var userId = GetCurrentUserId();
+            var role   = await _memberService.GetUserRoleInProjectAsync(projectId, userId);
+            if (role == null)
+                return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
             var milestone = await _milestoneService.GetMilestoneByIdAsync(id);
             if (milestone == null || milestone.ProjectId != projectId)
                 return NotFound(new { success = false, error = new { code = "MILESTONE_NOT_FOUND" } });
@@ -37,17 +49,25 @@ namespace ProjectService.Controllers
 
         [Authorize]
         [HttpPost]
-        public async Task<IActionResult> CreateMilestone(Guid projectId, [FromBody] CreateMilestoneRequest request)
+        public async Task<IActionResult> CreateMilestone(Guid projectId,
+            [FromBody] CreateMilestoneRequest request)
         {
+            var userId = GetCurrentUserId();
+            var role   = await _memberService.GetUserRoleInProjectAsync(projectId, userId);
+
+            // Owner (0) or Manager (1) can create milestones
+            if (role == null || role > 1)
+                return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
             var milestone = new Milestone
             {
-                Id = Guid.NewGuid(),
-                ProjectId = projectId,
-                Name = request.Name,
+                Id          = Guid.NewGuid(),
+                ProjectId   = projectId,
+                Name        = request.Name,
                 Description = request.Description,
-                TargetDate = request.TargetDate,
-                Status = 0,
-                CreatedAt = DateTime.UtcNow
+                TargetDate  = request.TargetDate,
+                Status      = 0,
+                CreatedAt   = DateTime.UtcNow
             };
 
             await _milestoneService.CreateMilestoneAsync(milestone);
@@ -56,9 +76,18 @@ namespace ProjectService.Controllers
 
         [Authorize]
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateMilestone(Guid projectId, Guid id, [FromBody] UpdateMilestoneRequest request)
+        public async Task<IActionResult> UpdateMilestone(Guid projectId, Guid id,
+            [FromBody] UpdateMilestoneRequest request)
         {
-            var milestone = await _milestoneService.UpdateMilestoneAsync(id, request.Name, request.Description, request.TargetDate, request.Status);
+            var userId = GetCurrentUserId();
+            var role   = await _memberService.GetUserRoleInProjectAsync(projectId, userId);
+
+            // Owner (0) or Manager (1) can update milestones
+            if (role == null || role > 1)
+                return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
+            var milestone = await _milestoneService.UpdateMilestoneAsync(
+                id, request.Name, request.Description, request.TargetDate, request.Status);
             if (milestone == null)
                 return NotFound(new { success = false, error = new { code = "MILESTONE_NOT_FOUND" } });
 
@@ -69,12 +98,22 @@ namespace ProjectService.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMilestone(Guid projectId, Guid id)
         {
+            var userId = GetCurrentUserId();
+            var role   = await _memberService.GetUserRoleInProjectAsync(projectId, userId);
+
+            // Owner (0) or Manager (1) can delete milestones
+            if (role == null || role > 1)
+                return StatusCode(403, new { success = false, error = new { code = "FORBIDDEN" } });
+
             var success = await _milestoneService.DeleteMilestoneAsync(id);
             if (!success)
                 return NotFound(new { success = false, error = new { code = "MILESTONE_NOT_FOUND" } });
 
             return Ok(new { success = true });
         }
+
+        private Guid GetCurrentUserId() =>
+            Guid.Parse(User.FindFirst("sub")!.Value);
     }
 
     public class CreateMilestoneRequest
