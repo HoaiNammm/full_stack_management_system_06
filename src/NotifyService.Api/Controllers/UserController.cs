@@ -26,7 +26,7 @@ public class UserController : ControllerBase
             u.Id,
             u.FullName,
             u.Email,
-            u.Avatar,
+            u.AvatarUrl,
             u.Role
         });
         return Ok(new { success = true, data = result });
@@ -42,7 +42,7 @@ public class UserController : ControllerBase
 
         return Ok(new { success = true, data = new
         {
-            user.Id, user.FullName, user.Email, user.Avatar, user.Role, user.Status, user.CreatedAt
+            user.Id, user.FullName, user.Email, user.AvatarUrl, user.Role, user.IsActive, user.CreatedAt
         }});
     }
 

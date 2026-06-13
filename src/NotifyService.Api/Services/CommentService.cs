@@ -17,9 +17,8 @@ public class CommentService
 
     public async Task<List<Comment>> GetByTaskAsync(Guid taskId) =>
         await _context.Comments
-            .Include(c => c.Author)
             .Include(c => c.Mentions)
-            .Where(c => c.TaskId == taskId)
+            .Where(c => c.TaskId == taskId && !c.IsDeleted)
             .OrderBy(c => c.CreatedAt)
             .ToListAsync();
 
@@ -30,8 +29,9 @@ public class CommentService
         {
             Id        = Guid.NewGuid(),
             TaskId    = taskId,
-            AuthorId  = authorId,
+            UserId    = authorId,
             Content   = content,
+            IsDeleted = false,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -41,15 +41,15 @@ public class CommentService
         {
             _context.CommentMentions.Add(new CommentMention
             {
-                Id        = Guid.NewGuid(),
-                CommentId = comment.Id,
-                UserId    = userId
+                Id              = Guid.NewGuid(),
+                CommentId       = comment.Id,
+                MentionedUserId = userId,
+                CreatedAt       = DateTime.UtcNow
             });
         }
 
         await _context.SaveChangesAsync();
 
-        // Notify task assignee (comment.created) — bỏ qua nếu assignee chính là author
         if (taskAssigneeId.HasValue && taskAssigneeId != authorId)
         {
             await _notificationService.CreateAsync(
@@ -60,7 +60,6 @@ public class CommentService
                 relatedTaskId: taskId);
         }
 
-        // Notify từng mentioned user (user.mentioned) — bỏ qua author
         foreach (var userId in mentionedUserIds.Distinct().Where(id => id != authorId))
         {
             await _notificationService.CreateAsync(
@@ -77,7 +76,7 @@ public class CommentService
     public async Task<Comment?> UpdateAsync(Guid commentId, Guid authorId, string content)
     {
         var comment = await _context.Comments
-            .FirstOrDefaultAsync(c => c.Id == commentId && c.AuthorId == authorId);
+            .FirstOrDefaultAsync(c => c.Id == commentId && c.UserId == authorId && !c.IsDeleted);
         if (comment == null) return null;
 
         comment.Content   = content;
@@ -89,10 +88,11 @@ public class CommentService
     public async Task<bool> DeleteAsync(Guid commentId, Guid authorId)
     {
         var comment = await _context.Comments
-            .FirstOrDefaultAsync(c => c.Id == commentId && c.AuthorId == authorId);
+            .FirstOrDefaultAsync(c => c.Id == commentId && c.UserId == authorId && !c.IsDeleted);
         if (comment == null) return false;
 
-        _context.Comments.Remove(comment);
+        comment.IsDeleted = true;
+        comment.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         return true;
     }

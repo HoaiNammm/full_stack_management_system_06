@@ -14,7 +14,7 @@ public class UserService
     }
 
     public async Task<List<User>> GetAllAsync() =>
-        await _context.Users.Where(u => u.Status == 1).OrderBy(u => u.FullName).ToListAsync();
+        await _context.Users.Where(u => u.IsActive).OrderBy(u => u.FullName).ToListAsync();
 
     public async Task<User?> GetByIdAsync(Guid id) =>
         await _context.Users.FindAsync(id);
@@ -32,7 +32,7 @@ public class UserService
             FullName     = fullName,
             PasswordHash = passwordHash,
             Role         = role,
-            Status       = 1,
+            IsActive     = true,
             CreatedAt    = DateTime.UtcNow
         };
 
@@ -46,7 +46,7 @@ public class UserService
         var user = await _context.Users.FindAsync(userId);
         if (user == null) return;
 
-        user.LastLogin = DateTime.UtcNow;
+        user.LastLoginAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
     }
 }

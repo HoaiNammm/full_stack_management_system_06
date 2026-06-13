@@ -14,6 +14,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddDbContext<NotifyDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 // Services
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<NotificationService>();
@@ -101,7 +104,7 @@ using (var scope = app.Services.CreateScope())
                 Email        = "2@example.com",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
                 Role         = "ProjectManager",
-                Status       = 1,
+                IsActive     = true,
                 CreatedAt    = DateTime.UtcNow
             },
             new NotifyService.Api.Models.User
@@ -111,7 +114,7 @@ using (var scope = app.Services.CreateScope())
                 Email        = "1@example.com",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
                 Role         = "Member",
-                Status       = 1,
+                IsActive     = true,
                 CreatedAt    = DateTime.UtcNow
             },
             new NotifyService.Api.Models.User
@@ -121,7 +124,7 @@ using (var scope = app.Services.CreateScope())
                 Email        = "3@example.com",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
                 Role         = "Viewer",
-                Status       = 1,
+                IsActive     = true,
                 CreatedAt    = DateTime.UtcNow
             }
         );

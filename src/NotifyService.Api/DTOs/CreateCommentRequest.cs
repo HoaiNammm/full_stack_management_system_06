@@ -9,5 +9,6 @@ public class CreateCommentRequest
     public string Content { get; set; } = string.Empty;
 
     public List<Guid> MentionedUserIds { get; set; } = new();
-    public List<CommentAttachmentRequest> Attachments { get; set; } = new() ;
+    public List<CommentAttachmentRequest> Attachments { get; set; } = new();
+    public Guid? TaskAssigneeId { get; set; }
 }
