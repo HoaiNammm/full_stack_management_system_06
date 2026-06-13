@@ -22,17 +22,12 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<User>().HasKey(u => u.Id);
         modelBuilder.Entity<User>().Property(u => u.Id).HasDefaultValueSql("NEWID()");
         modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
-        modelBuilder.Entity<User>().Property(u => u.Status).HasDefaultValue(1);
-        modelBuilder.Entity<User>().Ignore(u => u.IsActive);
+        modelBuilder.Entity<User>().Property(u => u.IsActive).HasDefaultValue(true);
 
         // Comment
         modelBuilder.Entity<Comment>().HasKey(c => c.Id);
         modelBuilder.Entity<Comment>().Property(c => c.Id).HasDefaultValueSql("NEWID()");
-        modelBuilder.Entity<Comment>()
-            .HasOne(c => c.Author)
-            .WithMany(u => u.Comments)
-            .HasForeignKey(c => c.AuthorId)
-            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Comment>().Property(c => c.IsDeleted).HasDefaultValue(false);
 
         // CommentMention
         modelBuilder.Entity<CommentMention>().HasKey(m => m.Id);
@@ -46,12 +41,6 @@ public class AppDbContext : DbContext
         // Notification
         modelBuilder.Entity<Notification>().HasKey(n => n.Id);
         modelBuilder.Entity<Notification>().Property(n => n.Id).HasDefaultValueSql("NEWID()");
-        modelBuilder.Entity<Notification>().Property(n => n.IsRead).HasDefaultValue(false);
-        modelBuilder.Entity<Notification>()
-            .HasOne(n => n.User)
-            .WithMany(u => u.Notifications)
-            .HasForeignKey(n => n.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
 
         // UserPreference (1-1 với User)
         modelBuilder.Entity<UserPreference>().HasKey(p => p.Id);

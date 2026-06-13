@@ -12,7 +12,6 @@ public class Comment
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
-    public User Author { get; set; } = null!;
     public ICollection<CommentMention> Mentions { get; set; } = new List<CommentMention>();
     public ICollection<CommentAttachment> Attachments { get; set; } = new List<CommentAttachment>();
 }

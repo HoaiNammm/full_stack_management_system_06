@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NotifyService.Api.Data;
 
@@ -11,9 +12,11 @@ using NotifyService.Api.Data;
 namespace NotifyService.Api.Migrations
 {
     [DbContext(typeof(NotifyDbContext))]
-    partial class NotifyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260613075027_FixAllModelFields")]
+    partial class FixAllModelFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

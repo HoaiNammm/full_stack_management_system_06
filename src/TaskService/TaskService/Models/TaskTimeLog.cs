@@ -9,8 +9,8 @@ public class TaskTimeLog
     public decimal   Hours       { get; set; }
     public DateTime  LoggedAt    { get; set; } = DateTime.UtcNow;
     public DateTime  LoggedDate  { get; set; } = DateTime.UtcNow;
-    public DateTime  CreatedAt   { get; set; } = DateTime.UtcNow;
     public string?   Description { get; set; }
+    public DateTime  CreatedAt   { get; set; } = DateTime.UtcNow;
 
     public TaskItem? Task { get; set; }
 }
