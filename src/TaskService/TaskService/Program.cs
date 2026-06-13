@@ -49,7 +49,11 @@ builder.Services.AddAuthorization();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowVue", policy =>
-        policy.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost")
+        policy.SetIsOriginAllowed(origin =>
+              {
+                  var host = new Uri(origin).Host;
+                  return host == "localhost" || host == "127.0.0.1";
+              })
               .AllowAnyMethod()
               .AllowAnyHeader());
 });
@@ -99,7 +103,16 @@ using (var scope = app.Services.CreateScope())
         BEGIN
             ALTER TABLE Tasks ADD SprintId uniqueidentifier NULL;
             CREATE INDEX IX_Tasks_SprintId ON Tasks (SprintId);
-        END");
+        END
+
+        IF COL_LENGTH('SubTasks', 'Description') IS NULL ALTER TABLE SubTasks ADD Description nvarchar(max) NULL;
+        IF COL_LENGTH('SubTasks', 'AssignedTo') IS NULL ALTER TABLE SubTasks ADD AssignedTo uniqueidentifier NULL;
+        IF COL_LENGTH('SubTasks', 'Status') IS NULL ALTER TABLE SubTasks ADD Status int NOT NULL CONSTRAINT DF_SubTasks_Status DEFAULT 0;
+        IF COL_LENGTH('SubTasks', 'UpdatedAt') IS NULL ALTER TABLE SubTasks ADD UpdatedAt datetime2 NULL;
+
+        IF COL_LENGTH('TaskTimeLogs', 'LoggedBy') IS NULL ALTER TABLE TaskTimeLogs ADD LoggedBy uniqueidentifier NOT NULL CONSTRAINT DF_TaskTimeLogs_LoggedBy DEFAULT '00000000-0000-0000-0000-000000000000';
+        IF COL_LENGTH('TaskTimeLogs', 'LoggedDate') IS NULL ALTER TABLE TaskTimeLogs ADD LoggedDate datetime2 NOT NULL CONSTRAINT DF_TaskTimeLogs_LoggedDate DEFAULT SYSUTCDATETIME();
+        IF COL_LENGTH('TaskTimeLogs', 'CreatedAt') IS NULL ALTER TABLE TaskTimeLogs ADD CreatedAt datetime2 NOT NULL CONSTRAINT DF_TaskTimeLogs_CreatedAt DEFAULT SYSUTCDATETIME();");
 }
 
 app.UseCors("AllowVue");

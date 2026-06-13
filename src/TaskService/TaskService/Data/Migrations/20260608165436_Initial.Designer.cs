@@ -13,7 +13,7 @@ namespace TaskService.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20260608165436_Initial")]
-    partial class Initial
+    partial class TaskSchemaInitial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

@@ -1,15 +1,15 @@
 <template>
-  <div class="w-[300px] flex-shrink-0 flex flex-col max-h-full rounded-lg shadow-sm transition-all"
+  <div class="w-[310px] flex-shrink-0 flex flex-col max-h-full rounded-xl shadow-sm transition-all"
     :class="[
-      column.dotColor === 'bg-outline' ? 'bg-surface-container-lowest border border-outline-variant' : 'bg-surface-container-lowest border border-outline-variant',
-      dragOver ? 'ring-2 ring-primary ring-offset-1' : ''
+      'bg-surface-container-low/80 border border-outline-variant backdrop-blur-sm',
+      dragOver ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''
     ]"
     @dragover.prevent="dragOver = true"
     @dragleave="dragOver = false"
     @drop="onDrop">
 
     <!-- Header -->
-    <div class="p-3 border-b border-outline-variant flex justify-between items-center bg-surface-bright rounded-t-lg">
+    <div class="p-3 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest rounded-t-xl">
       <div class="flex items-center gap-2">
         <div class="w-2 h-2 rounded-full" :class="column.dotColor"></div>
         <h3 class="font-label-lg text-label-lg text-on-surface">{{ column.title }}</h3>
@@ -19,22 +19,22 @@
 
     <!-- Add Task button / inline form -->
     <div class="px-2 pt-2">
-      <div v-if="addingTask" class="flex flex-col gap-1">
+      <div v-if="canEdit && addingTask" class="flex flex-col gap-1">
         <input v-model="newTitle" ref="inputRef"
           @keyup.enter="submitTask" @keyup.esc="cancelAdd"
-          class="w-full px-2 py-1.5 rounded border border-primary font-body-sm text-body-sm bg-surface-container-lowest outline-none"
+          class="app-input w-full px-2 py-1.5 rounded-lg font-body-sm text-body-sm"
           placeholder="Tiêu đề task..." />
         <div class="flex gap-1">
           <button @click="submitTask" :disabled="!newTitle.trim() || saving"
-            class="flex-1 py-1 text-[11px] bg-primary text-on-primary rounded font-label-md disabled:opacity-50 flex items-center justify-center gap-1">
+            class="flex-1 py-1 text-[11px] bg-primary text-on-primary rounded-lg font-label-md disabled:opacity-50 flex items-center justify-center gap-1">
             <span v-if="saving" class="material-symbols-outlined animate-spin text-[12px]">progress_activity</span>
             Thêm
           </button>
           <button @click="cancelAdd" class="px-2 py-1 text-[11px] border border-outline-variant text-on-surface-variant rounded">Hủy</button>
         </div>
       </div>
-      <button v-else @click="startAdding"
-        class="w-full py-1.5 border border-dashed border-outline-variant rounded text-on-surface-variant hover:text-primary hover:border-primary hover:bg-primary/5 transition-all flex justify-center items-center gap-1 font-label-md text-label-md">
+      <button v-else-if="canEdit" @click="startAdding"
+        class="w-full py-1.5 border border-dashed border-outline-variant rounded-lg text-on-surface-variant hover:text-primary hover:border-primary hover:bg-primary/5 transition-all flex justify-center items-center gap-1 font-label-md text-label-md">
         <span class="material-symbols-outlined text-[16px]">add</span> Thêm task
       </button>
     </div>
@@ -42,11 +42,12 @@
     <!-- Task cards -->
     <div class="flex-1 overflow-y-auto kanban-scroll p-2 flex flex-col gap-2">
       <div v-for="task in column.tasks" :key="task.id"
-        draggable="true"
+        data-testid="kanban-task-card"
+        :draggable="canEdit"
         @dragstart="onDragStart($event, task.id)"
         @dragend="dragOver = false"
         @click="emit('open-task', task.id)"
-        class="cursor-pointer active:cursor-grabbing">
+        :class="canEdit ? 'cursor-pointer active:cursor-grabbing' : 'cursor-pointer'">
         <TaskCard :task="task" />
       </div>
       <div v-if="dragOver && column.tasks.length === 0"
@@ -61,7 +62,10 @@
 import { ref, nextTick } from 'vue'
 import TaskCard from './TaskCard.vue'
 
-const props = defineProps(['column'])
+const props = defineProps({
+  column: { type: Object, required: true },
+  canEdit: { type: Boolean, default: true },
+})
 const emit  = defineEmits(['add-task', 'task-moved', 'open-task'])
 
 const addingTask = ref(false)
@@ -71,6 +75,7 @@ const dragOver   = ref(false)
 const inputRef   = ref(null)
 
 function startAdding() {
+  if (!props.canEdit) return
   addingTask.value = true
   newTitle.value   = ''
   nextTick(() => inputRef.value?.focus())
@@ -82,6 +87,7 @@ function cancelAdd() {
 }
 
 async function submitTask() {
+  if (!props.canEdit) return
   if (!newTitle.value.trim() || saving.value) return
   saving.value = true
   try {
@@ -93,12 +99,17 @@ async function submitTask() {
 }
 
 function onDragStart(e, taskId) {
+  if (!props.canEdit) {
+    e.preventDefault()
+    return
+  }
   e.dataTransfer.setData('taskId', taskId)
   e.dataTransfer.effectAllowed = 'move'
 }
 
 function onDrop(e) {
   dragOver.value = false
+  if (!props.canEdit) return
   const taskId = e.dataTransfer.getData('taskId')
   if (taskId) emit('task-moved', { taskId, columnId: props.column.id })
 }

@@ -69,9 +69,11 @@ public class CommentController : ControllerBase
 public class CreateCommentRequest
 {
     public Guid TaskId { get; set; }
+    public Guid? ProjectId { get; set; }
     public string Content { get; set; } = string.Empty;
     public List<Guid>? MentionedUserIds { get; set; }
     public Guid? TaskAssigneeId { get; set; }
+    public List<NotifyService.Api.DTOs.CommentAttachmentRequest> Attachments { get; set; } = new();
 }
 
 public class UpdateCommentRequest

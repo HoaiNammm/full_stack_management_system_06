@@ -1,9 +1,9 @@
 <template>
-  <div class="bg-surface-container-lowest p-md rounded-xl shadow-sm border flex flex-col gap-xs hover:shadow-md transition-shadow"
+  <div class="app-card p-md flex flex-col gap-xs interactive-card h-full group"
     :class="borderClass || 'border-outline-variant'">
     <div class="flex justify-between items-center">
       <span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{{ label }}</span>
-      <div class="w-8 h-8 rounded-full flex items-center justify-center" :class="iconBg">
+      <div class="w-9 h-9 rounded-full flex items-center justify-center group-hover:scale-105 transition-transform" :class="iconBg">
         <span class="material-symbols-outlined text-[18px]">{{ icon }}</span>
       </div>
     </div>

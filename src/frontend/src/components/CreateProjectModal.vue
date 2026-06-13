@@ -1,11 +1,12 @@
 <template>
-  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" @click.self="$emit('close')">
-    <div class="bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant w-full max-w-lg flex flex-col max-h-[90vh]">
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="$emit('close')">
+    <div class="glass-card rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[92vh] overflow-hidden">
 
       <!-- Header -->
-      <div class="flex items-center justify-between p-md border-b border-outline-variant flex-shrink-0">
+      <div class="relative overflow-hidden flex items-center justify-between p-lg border-b border-outline-variant flex-shrink-0 bg-surface-container-low">
+        <div class="absolute inset-y-0 right-0 w-1/2 bg-primary/10 pointer-events-none"></div>
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+          <div class="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
             <span class="material-symbols-outlined text-primary text-[20px]">create_new_folder</span>
           </div>
           <div>
@@ -25,7 +26,7 @@
       </div>
 
       <!-- Body -->
-      <div class="p-md flex flex-col gap-md overflow-y-auto flex-1">
+      <div class="p-lg flex flex-col gap-md overflow-y-auto flex-1">
 
         <!-- STEP 1: Template selection -->
         <template v-if="step === 1">
@@ -43,7 +44,7 @@
               v-for="tpl in templates"
               :key="tpl.id"
               @click="form.templateId = tpl.id"
-              class="flex items-start gap-3 p-4 rounded-xl border-2 transition-all text-left"
+              class="flex items-start gap-3 p-4 rounded-2xl border-2 transition-all text-left"
               :class="form.templateId === tpl.id
                 ? 'border-primary bg-primary/5'
                 : 'border-outline-variant hover:border-outline hover:bg-surface-container-low'"
@@ -116,8 +117,8 @@
           <div class="flex flex-col gap-xs">
             <label class="font-label-lg text-label-lg text-on-surface">Tên dự án <span class="text-error">*</span></label>
             <input v-model="form.name"
-              :class="['w-full px-3 py-2 rounded-lg border font-body-md text-body-md bg-surface-container-low outline-none transition-all',
-                errors.name ? 'border-error focus:ring-1 focus:ring-error' : 'border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary']"
+              :class="['app-input w-full px-3 py-2 rounded-lg font-body-md text-body-md',
+                errors.name ? 'border-error focus:ring-1 focus:ring-error' : '']"
               placeholder="VD: Payment Gateway v2" />
             <p v-if="errors.name" class="font-label-sm text-label-sm text-error flex items-center gap-1">
               <span class="material-symbols-outlined text-[14px]">error</span>{{ errors.name }}
@@ -128,7 +129,7 @@
           <div class="flex flex-col gap-xs">
             <label class="font-label-lg text-label-lg text-on-surface">Mô tả</label>
             <textarea v-model="form.description" rows="3"
-              class="w-full px-3 py-2 rounded-lg border border-outline-variant font-body-md text-body-md bg-surface-container-low outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none"
+              class="app-input w-full px-3 py-2 rounded-lg font-body-md text-body-md resize-none"
               placeholder="Mô tả ngắn về mục tiêu dự án..."></textarea>
           </div>
 
@@ -137,14 +138,14 @@
             <div class="flex flex-col gap-xs">
               <label class="font-label-lg text-label-lg text-on-surface">Ngày bắt đầu <span class="text-error">*</span></label>
               <input type="date" v-model="form.startDate"
-                :class="['w-full px-3 py-2 rounded-lg border font-body-md text-body-md bg-surface-container-low outline-none transition-all',
-                  errors.startDate ? 'border-error' : 'border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary']" />
+                :class="['app-input w-full px-3 py-2 rounded-lg font-body-md text-body-md',
+                  errors.startDate ? 'border-error' : '']" />
               <p v-if="errors.startDate" class="font-label-sm text-label-sm text-error">{{ errors.startDate }}</p>
             </div>
             <div class="flex flex-col gap-xs">
               <label class="font-label-lg text-label-lg text-on-surface">Ngày kết thúc</label>
               <input type="date" v-model="form.endDate"
-                class="w-full px-3 py-2 rounded-lg border border-outline-variant font-body-md text-body-md bg-surface-container-low outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" />
+                class="app-input w-full px-3 py-2 rounded-lg font-body-md text-body-md" />
             </div>
           </div>
 
@@ -185,6 +186,61 @@
             </div>
           </div>
 
+          <!-- Permissions -->
+          <div class="flex flex-col gap-xs">
+            <label class="font-label-lg text-label-lg text-on-surface">Phân quyền dự án</label>
+            <div class="rounded-xl border border-outline-variant bg-surface-container-low p-3 flex flex-col gap-3">
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="font-label-lg text-label-lg text-on-surface">Bạn là Owner</p>
+                  <p class="font-label-sm text-label-sm text-on-surface-variant">Người tạo dự án được Backend tự gán toàn quyền quản lý.</p>
+                </div>
+                <span class="text-[11px] font-bold px-2 py-1 rounded-full bg-primary/10 text-primary">Owner</span>
+              </div>
+
+              <div class="h-px bg-outline-variant"></div>
+
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="font-label-lg text-label-lg text-on-surface">Thành viên ban đầu</p>
+                  <p class="font-label-sm text-label-sm text-on-surface-variant">Chọn user và vai trò để thêm ngay sau khi tạo.</p>
+                </div>
+                <button type="button" @click="addInviteRow"
+                  class="px-3 py-1.5 rounded-lg border border-outline-variant text-primary hover:border-primary font-label-md text-label-md flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[16px]">person_add</span>
+                  Thêm
+                </button>
+              </div>
+
+              <div v-if="inviteRows.length === 0" class="text-center py-3 font-body-sm text-body-sm text-on-surface-variant">
+                Chưa chọn thành viên khởi tạo.
+              </div>
+
+              <div v-for="(row, index) in inviteRows" :key="row.id" class="grid grid-cols-[1fr_150px_auto] gap-2 items-center">
+                <select v-model="row.userId"
+                  class="min-w-0 px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest font-body-md text-body-md outline-none focus:border-primary">
+                  <option value="">Chọn thành viên</option>
+                  <option v-for="user in availableUsersFor(row)" :key="user.id" :value="user.id">
+                    {{ user.fullName || user.email }} - {{ user.email }}
+                  </option>
+                </select>
+                <select v-model="row.role"
+                  class="px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest font-body-md text-body-md outline-none focus:border-primary">
+                  <option v-for="role in projectRoles" :key="role.value" :value="role.value">{{ role.label }}</option>
+                </select>
+                <button type="button" @click="inviteRows.splice(index, 1)"
+                  class="w-9 h-9 rounded-lg border border-outline-variant text-on-surface-variant hover:text-error hover:border-error flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+              </div>
+
+              <p v-if="loadingUsers" class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+                <span class="material-symbols-outlined animate-spin text-[14px]">progress_activity</span>
+                Đang tải danh sách user...
+              </p>
+            </div>
+          </div>
+
           <!-- API Error -->
           <p v-if="apiError" class="font-label-sm text-label-sm text-error flex items-center gap-1 bg-error-container/20 rounded-lg px-3 py-2">
             <span class="material-symbols-outlined text-[14px]">error</span>{{ apiError }}
@@ -193,7 +249,7 @@
       </div>
 
       <!-- Footer -->
-      <div class="p-md border-t border-outline-variant flex justify-between gap-3 flex-shrink-0">
+      <div class="p-md border-t border-outline-variant bg-surface-container-low flex justify-between gap-3 flex-shrink-0">
         <button v-if="step === 2" @click="step = 1"
           class="px-md py-sm rounded-lg border border-outline-variant font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high transition-colors flex items-center gap-1">
           <span class="material-symbols-outlined text-[16px]">arrow_back</span>
@@ -225,7 +281,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { projectService } from '../services/api'
+import { projectService, userService } from '../services/api'
 
 const emit = defineEmits(['close', 'created'])
 
@@ -233,7 +289,18 @@ const step            = ref(1)
 const submitting      = ref(false)
 const apiError        = ref('')
 const loadingTemplates = ref(false)
+const loadingUsers     = ref(false)
 const templates       = ref([])
+const users           = ref([])
+const inviteRows      = ref([])
+let inviteCounter     = 0
+
+const projectRoles = [
+  { label: 'Project Manager', value: 1 },
+  { label: 'Developer', value: 2 },
+  { label: 'Tester', value: 3 },
+  { label: 'Viewer', value: 4 },
+]
 
 const colors = [
   { hex: '#3525cd', name: 'Indigo' },
@@ -258,6 +325,7 @@ const previewInitials = computed(() => {
 
 onMounted(async () => {
   loadingTemplates.value = true
+  loadingUsers.value = true
   try {
     templates.value = await projectService.getTemplates()
     if (templates.value.length > 0) {
@@ -276,7 +344,24 @@ onMounted(async () => {
   } finally {
     loadingTemplates.value = false
   }
+
+  try {
+    users.value = await userService.getAll()
+  } catch {
+    users.value = []
+  } finally {
+    loadingUsers.value = false
+  }
 })
+
+function addInviteRow() {
+  inviteRows.value.push({ id: ++inviteCounter, userId: '', role: 2 })
+}
+
+function availableUsersFor(row) {
+  const selected = new Set(inviteRows.value.filter(r => r !== row && r.userId).map(r => r.userId))
+  return users.value.filter(user => !selected.has(user.id))
+}
 
 function validate() {
   errors.value = {}
@@ -298,6 +383,15 @@ async function handleSubmit() {
       endDate:     form.value.endDate   ? new Date(form.value.endDate).toISOString()   : null,
       templateId:  form.value.templateId,
     })
+
+    const selectedMembers = inviteRows.value.filter(row => row.userId)
+    for (const member of selectedMembers) {
+      await projectService.addMember(project.id, {
+        userId: member.userId,
+        role: Number(member.role),
+      })
+    }
+
     emit('created', project)
   } catch (e) {
     apiError.value = e.response?.data?.message

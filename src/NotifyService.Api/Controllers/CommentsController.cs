@@ -9,7 +9,7 @@ using NotifyService.Api.Models;
 namespace NotifyService.Api.Controllers;
 
 [ApiController]
-[Route("api/comments")]
+[Route("api/comment-workflows")]
 [Authorize]
 public class CommentsController : ControllerBase
 {
