@@ -5,9 +5,9 @@
     <RouterView v-if="isPublicRoute" />
 
     <!-- Layout: App with sidebar + topbar -->
-    <div v-else class="flex h-screen overflow-hidden bg-background text-on-background">
+    <div v-else class="app-shell flex h-screen overflow-hidden text-on-background">
       <SideBar />
-      <div class="md:ml-[260px] flex flex-col flex-1 h-screen overflow-hidden">
+      <div class="md:ml-[280px] flex flex-col flex-1 h-screen overflow-hidden">
         <TopBar />
         <main class="flex-1 overflow-y-auto">
           <RouterView />
@@ -20,7 +20,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import SideBar from './components/SideBar.vue'
+import SideBar from './components/Sidebar.vue'
 import TopBar  from './components/TopBar.vue'
 
 const route  = useRoute()

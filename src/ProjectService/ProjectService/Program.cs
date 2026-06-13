@@ -27,7 +27,11 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowVue", policy =>
     {
-        policy.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost")
+        policy.SetIsOriginAllowed(origin =>
+              {
+                  var host = new Uri(origin).Host;
+                  return host == "localhost" || host == "127.0.0.1";
+              })
               .AllowAnyMethod()
               .AllowAnyHeader();
     });

@@ -51,7 +51,9 @@ public class KanbanService
             new KanbanColumn { Id = Guid.NewGuid(), ProjectId = projectId, Name = "Backlog",     Position = 0, Type = "backlog" },
             new KanbanColumn { Id = Guid.NewGuid(), ProjectId = projectId, Name = "To Do",       Position = 1, Type = "active"  },
             new KanbanColumn { Id = Guid.NewGuid(), ProjectId = projectId, Name = "In Progress", Position = 2, Type = "active"  },
-            new KanbanColumn { Id = Guid.NewGuid(), ProjectId = projectId, Name = "Done",        Position = 3, Type = "done"    },
+            new KanbanColumn { Id = Guid.NewGuid(), ProjectId = projectId, Name = "Review",      Position = 3, Type = "active"  },
+            new KanbanColumn { Id = Guid.NewGuid(), ProjectId = projectId, Name = "Testing",     Position = 4, Type = "active"  },
+            new KanbanColumn { Id = Guid.NewGuid(), ProjectId = projectId, Name = "Done",        Position = 5, Type = "done"    },
         };
         _db.KanbanColumns.AddRange(defaults);
         await _db.SaveChangesAsync();

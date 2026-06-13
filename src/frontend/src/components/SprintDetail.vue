@@ -15,11 +15,11 @@
         </span>
       </div>
       <div class="ml-auto flex items-center gap-2">
-        <button v-if="sprint.status === 0" @click="$emit('start', sprint)"
+        <button v-if="canManageSprints && sprint.status === 0" @click="$emit('start', sprint)"
           class="flex items-center gap-1 px-3 py-1.5 border border-primary text-primary rounded-lg font-label-md text-label-md hover:bg-primary hover:text-on-primary transition-colors">
           <span class="material-symbols-outlined text-[16px]">play_arrow</span>Bắt đầu
         </button>
-        <button v-else-if="sprint.status === 1" @click="$emit('complete', sprint)"
+        <button v-else-if="canManageSprints && sprint.status === 1" @click="$emit('complete', sprint)"
           class="flex items-center gap-1 px-3 py-1.5 border border-secondary text-secondary rounded-lg font-label-md text-label-md hover:bg-secondary hover:text-on-secondary transition-colors">
           <span class="material-symbols-outlined text-[16px]">check_circle</span>Hoàn thành
         </button>
@@ -146,13 +146,19 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useAuth } from '../composables/useAuth'
 import { taskService, userService } from '../services/api'
 
 const props = defineProps(['sprint', 'project'])
 defineEmits(['back', 'start', 'complete', 'reload'])
+const { user } = useAuth()
 
 const tasks   = ref([])
 const userMap = ref({})
+const currentMember = computed(() =>
+  (props.project.members || []).find(member => String(member.userId).toLowerCase() === String(user.value?.id || '').toLowerCase())
+)
+const canManageSprints = computed(() => ['Owner', 'Project Manager'].includes(currentMember.value?.role))
 const columns = ref([])
 const loading = ref(true)
 

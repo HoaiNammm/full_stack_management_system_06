@@ -8,7 +8,7 @@ using NotifyService.Api.Models;
 namespace NotifyService.Api.Controllers;
 
 [ApiController]
-[Route("api/users")]
+[Route("api/admin-users")]
 [Authorize]
 public class UsersController : ControllerBase
 {

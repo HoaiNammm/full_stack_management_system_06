@@ -8,6 +8,7 @@ public class SubTask
     public string?   Description    { get; set; }
     public Guid?     AssignedTo     { get; set; }
     public int       Status         { get; set; } = 0;
+    public bool      IsCompleted    { get; set; } = false;
     public decimal?  EstimatedHours { get; set; }
     public DateTime  CreatedAt      { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt      { get; set; }

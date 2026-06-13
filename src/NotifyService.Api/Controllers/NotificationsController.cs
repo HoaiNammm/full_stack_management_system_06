@@ -7,7 +7,7 @@ using NotifyService.Api.Data;
 namespace NotifyService.Api.Controllers;
 
 [ApiController]
-[Route("api/notifications")]
+[Route("api/user-notifications")]
 [Authorize]
 public class NotificationsController : ControllerBase
 {

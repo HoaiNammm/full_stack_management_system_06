@@ -1,13 +1,13 @@
 <template>
-  <div class="flex-grow px-lg py-lg max-w-7xl mx-auto w-full flex flex-col gap-lg">
+  <div class="page-wrap">
     <!-- Header -->
-    <div class="flex flex-wrap justify-between items-center gap-3">
+    <section class="page-hero">
       <div>
         <h2 class="font-headline-lg text-headline-lg text-on-surface">Lịch</h2>
         <p class="font-body-md text-body-md text-on-surface-variant mt-1">Xem deadline task, sprint và milestone của tất cả dự án.</p>
       </div>
 
-      <div class="flex items-center gap-3 flex-wrap">
+      <div class="relative z-10 mt-lg flex items-center gap-3 flex-wrap">
         <!-- Legend -->
         <div class="flex items-center gap-3">
           <div class="flex items-center gap-1.5">
@@ -26,7 +26,7 @@
 
         <!-- Project filter -->
         <select v-model="selectedProjectId" @change="onProjectChange"
-          class="bg-surface-container-low border border-outline-variant rounded-lg px-3 py-1.5 font-label-md text-label-md text-on-surface outline-none focus:border-primary transition-all">
+          class="app-input rounded-lg px-3 py-1.5 font-label-md text-label-md">
           <option value="">Tất cả dự án</option>
           <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
         </select>
@@ -34,14 +34,14 @@
         <!-- Sprint filter (only when a project is selected and sprints exist) -->
         <select v-if="selectedProjectId && sprints.length > 0"
           v-model="selectedSprintId" @change="applyFilters"
-          class="bg-surface-container-low border border-outline-variant rounded-lg px-3 py-1.5 font-label-md text-label-md text-on-surface outline-none focus:border-primary transition-all">
+          class="app-input rounded-lg px-3 py-1.5 font-label-md text-label-md">
           <option value="">Tất cả sprint</option>
           <option v-for="s in sprints" :key="s.id" :value="s.id">
             {{ s.name }}{{ s.status === 1 ? ' ●' : '' }}
           </option>
         </select>
       </div>
-    </div>
+    </section>
 
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center py-xl text-on-surface-variant gap-2">
@@ -55,7 +55,7 @@
     </div>
 
     <!-- Calendar -->
-    <div v-else class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden flex-1 min-h-[600px]">
+    <div v-else class="app-panel flex-1 min-h-[600px]">
       <FullCalendar
         ref="calRef"
         :options="calendarOptions"
@@ -178,6 +178,7 @@ async function loadCalendarData() {
           title: `🏃 ${s.name}`,
           start: s.startDate,
           end:   s.endDate || s.startDate,
+          allDay: true,
           backgroundColor: '#0f5e9c',
           borderColor:     '#0f5e9c',
           textColor:       '#ffffff',
@@ -188,6 +189,7 @@ async function loadCalendarData() {
             sprintId:    s.id,
             description: s.goal || s.description,
           },
+          classNames: ['calendar-event-sprint'],
         })
       }
     } catch { /* ignore */ }
@@ -211,6 +213,7 @@ async function loadCalendarData() {
             projectName: pName,
             description: m.description,
           },
+          classNames: ['calendar-event-milestone'],
         })
       }
     } catch { /* ignore */ }
@@ -236,6 +239,7 @@ async function loadCalendarData() {
             sprintId:    t.sprintId || null,
             description: t.description,
           },
+          classNames: ['calendar-event-task'],
         })
       }
     } catch { /* TaskService may be offline */ }
@@ -252,25 +256,120 @@ onMounted(loadCalendarData)
 <style>
 /* FullCalendar custom theming */
 .fc {
-  --fc-border-color: rgba(0,0,0,0.08);
-  --fc-today-bg-color: rgba(53,37,205,0.06);
+  --fc-border-color: rgb(var(--color-outline-variant));
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: rgb(var(--color-surface-container-low));
+  --fc-list-event-hover-bg-color: rgb(var(--color-surface-container-low));
+  --fc-today-bg-color: rgb(var(--color-primary) / 0.07);
   --fc-event-border-color: transparent;
+  color: rgb(var(--color-on-surface));
+}
+.fc .fc-scrollgrid,
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: rgb(var(--color-outline-variant)) !important;
+}
+.fc .fc-col-header-cell {
+  background: rgb(var(--color-surface-container-low)) !important;
+}
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number {
+  color: rgb(var(--color-on-surface-variant)) !important;
+}
+.fc .fc-daygrid-day {
+  background: rgb(var(--color-surface-container-lowest) / 0.58);
+}
+.fc .fc-daygrid-day-frame {
+  transition: background-color 160ms ease;
+}
+.fc .fc-daygrid-day:hover .fc-daygrid-day-frame {
+  background: rgb(var(--color-primary) / 0.035);
 }
 .fc-toolbar-title {
   font-size: 1.1rem !important;
   font-weight: 700 !important;
+  color: rgb(var(--color-on-surface));
 }
 .fc-button-primary {
-  background-color: #3525cd !important;
-  border-color: #3525cd !important;
+  background-color: rgb(var(--color-primary)) !important;
+  border-color: rgb(var(--color-primary)) !important;
+  color: rgb(var(--color-on-primary)) !important;
+  box-shadow: none !important;
 }
 .fc-button-primary:not(.fc-button-active):hover {
-  background-color: #2a1db0 !important;
+  opacity: 0.9;
 }
 .fc-event {
   cursor: pointer;
   font-size: 0.78rem !important;
-  border-radius: 4px !important;
-  padding: 1px 4px !important;
+  border-radius: 7px !important;
+  padding: 2px 6px !important;
+  box-shadow: none !important;
+}
+.fc-event.calendar-event-task {
+  background-color: #b3261e !important;
+  border-color: #b3261e !important;
+}
+.fc-event.calendar-event-sprint {
+  background-color: #146cae !important;
+  border-color: #146cae !important;
+}
+.fc-event.calendar-event-milestone {
+  background-color: #c55a11 !important;
+  border-color: #c55a11 !important;
+}
+
+.dark .fc {
+  --fc-border-color: rgb(var(--color-outline-variant) / 0.62);
+  --fc-neutral-bg-color: rgb(var(--color-surface-container));
+  --fc-today-bg-color: rgb(var(--color-primary) / 0.11);
+}
+.dark .fc .fc-scrollgrid {
+  background: rgb(var(--color-surface-container-lowest)) !important;
+}
+.dark .fc .fc-col-header-cell {
+  background: rgb(var(--color-surface-container-high)) !important;
+}
+.dark .fc .fc-col-header-cell-cushion {
+  color: rgb(var(--color-on-surface) / 0.86) !important;
+}
+.dark .fc .fc-daygrid-day {
+  background: rgb(var(--color-surface-container-lowest)) !important;
+}
+.dark .fc .fc-day-other {
+  background: rgb(var(--color-surface-container) / 0.55) !important;
+}
+.dark .fc .fc-daygrid-day-number {
+  color: rgb(var(--color-on-surface-variant)) !important;
+}
+.dark .fc .fc-day-today .fc-daygrid-day-frame {
+  background: rgb(var(--color-primary) / 0.12) !important;
+  box-shadow: inset 0 0 0 1px rgb(var(--color-primary) / 0.22);
+}
+.dark .fc .fc-daygrid-day:hover .fc-daygrid-day-frame {
+  background: rgb(var(--color-primary) / 0.08);
+}
+.dark .fc-event {
+  color: #f8fafc !important;
+  opacity: 0.92;
+}
+.dark .fc-event.calendar-event-task {
+  background-color: #74252a !important;
+  border-color: #74252a !important;
+}
+.dark .fc-event.calendar-event-sprint {
+  background-color: #174c72 !important;
+  border-color: #174c72 !important;
+}
+.dark .fc-event.calendar-event-milestone {
+  background-color: #7c3f16 !important;
+  border-color: #7c3f16 !important;
+}
+.dark .fc-list,
+.dark .fc-list-day-cushion,
+.dark .fc-list-table td {
+  background: rgb(var(--color-surface-container-lowest)) !important;
+  color: rgb(var(--color-on-surface)) !important;
+  border-color: rgb(var(--color-outline-variant)) !important;
 }
 </style>

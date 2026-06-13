@@ -8,6 +8,10 @@ import LoginView          from '../views/LoginView.vue'
 import RegisterView       from '../views/RegisterView.vue'
 import NotificationsPage  from '../views/NotificationsPage.vue'
 import SettingsPage       from '../views/SettingsPage.vue'
+import TasksPage          from '../views/TasksPage.vue'
+import MembersPage        from '../views/MembersPage.vue'
+import SystemStatusPage   from '../views/SystemStatusPage.vue'
+import { hasValidSession } from '../services/session'
 
 const routes = [
   { path: '/',           redirect: '/dashboard' },
@@ -15,11 +19,14 @@ const routes = [
   { path: '/register',   component: RegisterView, meta: { public: true } },
   { path: '/dashboard',  component: Dashboard },
   { path: '/kanban',     component: KanbanBoard },
+  { path: '/tasks',      component: TasksPage },
+  { path: '/members',    component: MembersPage },
   { path: '/projects',   component: ProjectsPage },
   { path: '/projects/:id', component: ProjectDetail },
   { path: '/calendar',       component: CalendarView },
   { path: '/notifications',  component: NotificationsPage },
   { path: '/settings',       component: SettingsPage },
+  { path: '/system-status',  component: SystemStatusPage },
 ]
 
 const router = createRouter({
@@ -28,8 +35,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const token   = localStorage.getItem('token')
-  const isValid = token && token !== 'undefined' && token !== 'null' && token.startsWith('eyJ')
+  const isValid = hasValidSession()
 
   // Already logged in → skip login page, go to dashboard
   if (to.meta.public && isValid) {
@@ -38,8 +44,6 @@ router.beforeEach((to) => {
 
   // Not logged in → redirect to login
   if (!to.meta.public && !isValid) {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
     return { path: '/login', query: { redirect: to.fullPath } }
   }
 })

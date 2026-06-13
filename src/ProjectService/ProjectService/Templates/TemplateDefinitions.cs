@@ -36,6 +36,7 @@ namespace ProjectService.Templates
                     new("To Do",       "active"),
                     new("In Progress", "active"),
                     new("Review",      "active"),
+                    new("Testing",     "active"),
                     new("Done",        "done"),
                 },
                 SprintCount: 3,
@@ -44,6 +45,84 @@ namespace ProjectService.Templates
                     new("Alpha Release", OffsetDays: 14),
                     new("Beta Release",  OffsetDays: 28),
                     new("Final Release", OffsetDays: 42),
+                }),
+
+            new ProjectTemplate(
+                Id:          "website-project",
+                Name:        "Website Project",
+                Description: "Quy trinh thiet ke, phat trien, kiem thu va ban giao website.",
+                Icon:        "language",
+                IconBg:      "bg-primary/10",
+                IconColor:   "text-primary",
+                Recommended: false,
+                Tags:        new() { "Website", "UI/UX", "QA", "Launch" },
+                Columns: new()
+                {
+                    new("Backlog",     "backlog"),
+                    new("To Do",       "active"),
+                    new("In Progress", "active"),
+                    new("Review",      "active"),
+                    new("Testing",     "active"),
+                    new("Done",        "done"),
+                },
+                SprintCount: 2,
+                Milestones: new()
+                {
+                    new("Design Sign-off", OffsetDays: 10),
+                    new("UAT",             OffsetDays: 24),
+                    new("Go Live",         OffsetDays: 30, UseEndDate: true),
+                }),
+
+            new ProjectTemplate(
+                Id:          "mobile-app",
+                Name:        "Mobile App Project",
+                Description: "Theo doi vong doi phat trien ung dung mobile tu prototype den release.",
+                Icon:        "phone_iphone",
+                IconBg:      "bg-secondary/10",
+                IconColor:   "text-secondary",
+                Recommended: false,
+                Tags:        new() { "Mobile", "Sprint", "Testing", "Release" },
+                Columns: new()
+                {
+                    new("Backlog",     "backlog"),
+                    new("To Do",       "active"),
+                    new("In Progress", "active"),
+                    new("Review",      "active"),
+                    new("Testing",     "active"),
+                    new("Done",        "done"),
+                },
+                SprintCount: 3,
+                Milestones: new()
+                {
+                    new("Prototype", OffsetDays: 14),
+                    new("Beta Test", OffsetDays: 35),
+                    new("Store Release", OffsetDays: 45, UseEndDate: true),
+                }),
+
+            new ProjectTemplate(
+                Id:          "marketing-campaign",
+                Name:        "Marketing Campaign",
+                Description: "Lap ke hoach, san xuat noi dung, trien khai va do luong chien dich marketing.",
+                Icon:        "campaign",
+                IconBg:      "bg-tertiary/10",
+                IconColor:   "text-tertiary",
+                Recommended: false,
+                Tags:        new() { "Campaign", "Content", "Approval", "Report" },
+                Columns: new()
+                {
+                    new("Ideas",       "backlog"),
+                    new("Planning",    "active"),
+                    new("Production",  "active"),
+                    new("Approval",    "active"),
+                    new("Scheduled",   "active"),
+                    new("Done",        "done"),
+                },
+                SprintCount: 0,
+                Milestones: new()
+                {
+                    new("Campaign Brief", OffsetDays: 7),
+                    new("Launch",         OffsetDays: 21),
+                    new("Final Report",   OffsetDays: 35, UseEndDate: true),
                 }),
 
             new ProjectTemplate(
@@ -108,6 +187,8 @@ namespace ProjectService.Templates
                     new("Backlog",     "backlog"),
                     new("To Do",       "active"),
                     new("In Progress", "active"),
+                    new("Review",      "active"),
+                    new("Testing",     "active"),
                     new("Done",        "done"),
                 },
                 SprintCount: 0,

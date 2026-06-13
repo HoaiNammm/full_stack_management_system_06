@@ -1,13 +1,17 @@
 <template>
   <div class="flex-1 flex flex-col h-full overflow-hidden">
     <!-- Toolbar -->
-    <div class="w-full px-md md:px-lg py-sm bg-surface-container-lowest border-b border-outline-variant flex flex-wrap items-center justify-between gap-4 z-20">
+    <div class="w-full px-md md:px-lg py-sm bg-surface-container-lowest/85 border-b border-outline-variant flex flex-wrap items-center justify-between gap-4 z-20 backdrop-blur-xl">
       <div class="flex items-center gap-3 flex-wrap">
+        <div class="hidden lg:block mr-sm">
+          <p class="page-eyebrow">Board</p>
+          <h2 class="font-headline-sm text-headline-sm text-on-surface">Kanban Workspace</h2>
+        </div>
         <!-- Project selector -->
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-[18px] text-on-surface-variant">folder_shared</span>
           <select v-model="selectedProjectId" @change="onProjectChange"
-            class="bg-surface-container-low border border-outline-variant rounded-lg px-3 py-1.5 font-label-md text-label-md text-on-surface outline-none focus:border-primary transition-all">
+            class="app-input rounded-lg px-3 py-1.5 font-label-md text-label-md">
             <option value="">-- Chọn dự án --</option>
             <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
           </select>
@@ -16,7 +20,7 @@
         <div v-if="sprints.length > 0" class="flex items-center gap-2">
           <span class="material-symbols-outlined text-[18px] text-on-surface-variant">sprint</span>
           <select v-model="selectedSprintId" @change="loadColumns"
-            class="bg-surface-container-low border border-outline-variant rounded-lg px-3 py-1.5 font-label-md text-label-md text-on-surface outline-none focus:border-primary transition-all">
+            class="app-input rounded-lg px-3 py-1.5 font-label-md text-label-md">
             <option value="">Tất cả sprint</option>
             <option v-for="s in sprints" :key="s.id" :value="s.id">
               {{ s.name }}{{ s.status === 1 ? ' ●' : '' }}
@@ -52,8 +56,9 @@
     </div>
 
     <!-- Kanban Board -->
-    <div v-else class="flex-1 overflow-x-auto overflow-y-hidden kanban-scroll p-md md:p-lg bg-surface-container flex gap-md sm:gap-lg items-start">
+    <div v-else class="flex-1 overflow-x-auto overflow-y-hidden kanban-scroll p-md md:p-lg flex gap-md sm:gap-lg items-start">
       <KanbanColumn v-for="col in filteredColumns" :key="col.id" :column="col"
+        :can-edit="canEditTasks"
         @task-moved="handleTaskMoved" @add-task="handleAddTask"
         @open-task="openTaskId = $event" />
 
@@ -68,6 +73,7 @@
     v-if="openTaskId"
     :taskId="openTaskId"
     :columns="columns"
+    :can-edit="canEditTasks"
     @close="openTaskId = null"
     @updated="loadColumns"
     @deleted="loadColumns" />
@@ -79,14 +85,17 @@ import { useRoute } from 'vue-router'
 import KanbanColumn     from '../components/KanbanColumn.vue'
 import FilterBtn        from '../components/FilterBtn.vue'
 import TaskDetailModal  from '../components/TaskDetailModal.vue'
+import { useAuth } from '../composables/useAuth'
 import { projectService, taskService, userService } from '../services/api'
 
 const route = useRoute()
+const { user } = useAuth()
 
 const projects          = ref([])
 const selectedProjectId = ref(route.query.projectId || '')
 const sprints           = ref([])
 const selectedSprintId  = ref('')
+const projectMembers    = ref([])
 const columns           = ref([])
 const loading           = ref(false)
 const error             = ref('')
@@ -123,6 +132,14 @@ const filteredColumns = computed(() => {
     return { ...col, tasks, count: tasks.length }
   })
 })
+const currentMember = computed(() =>
+  projectMembers.value.find(member => String(member.userId).toLowerCase() === String(user.value?.id || '').toLowerCase())
+)
+const currentRole = computed(() => {
+  const names = ['Owner', 'Project Manager', 'Developer', 'Tester', 'Viewer']
+  return names[currentMember.value?.role] || ''
+})
+const canEditTasks = computed(() => ['Owner', 'Project Manager', 'Developer', 'Tester'].includes(currentRole.value))
 
 const PRIORITY_MAP  = { 1: 'low', 2: 'medium', 3: 'high', 0: 'none' }
 const AVATAR_COLORS = ['#3525cd','#006a61','#684000','#ba1a1a','#0f5e9c','#6a0dad','#2e7d32','#e65100']
@@ -153,7 +170,8 @@ function mapTask(t, userMap = {}) {
     id:            t.id,
     shortId:       t.id.slice(0, 8).toUpperCase(),
     title:         t.title,
-    tags:          (t.tags || []).map(tag => ({ text: tag, color: 'bg-surface-container text-on-surface-variant' })),
+    description:   t.description || '',
+    tags:          (t.tags?.length ? t.tags : [PRIORITY_MAP[t.priority] === 'high' ? 'Critical' : 'Project']).map(tag => ({ text: tag, color: tag === 'Critical' ? 'bg-error-container/30 text-error' : 'bg-primary/10 text-primary' })),
     priority:      PRIORITY_MAP[t.priority] || 'medium',
     deadline:      dl.text,
     deadlineColor: dl.color,
@@ -164,11 +182,14 @@ function mapTask(t, userMap = {}) {
     unassigned:    !t.assignedTo,
     inProgress:    false,
     done:          false,
+    progress:      t.progress ?? (PRIORITY_MAP[t.priority] === 'high' ? 35 : 60),
+    comments:      t.commentCount ?? t.commentsCount ?? 0,
+    attachments:   t.attachmentCount ?? 0,
   }
 }
 
 async function loadColumns() {
-  if (!selectedProjectId.value) { columns.value = []; return }
+  if (!selectedProjectId.value) { columns.value = []; projectMembers.value = []; return }
 
   loading.value = true
   error.value   = ''
@@ -176,11 +197,13 @@ async function loadColumns() {
     const taskParams = { projectId: selectedProjectId.value }
     if (selectedSprintId.value) taskParams.sprintId = selectedSprintId.value
 
-    const [cols, tasks, allUsers] = await Promise.all([
+    const [cols, tasks, allUsers, members] = await Promise.all([
       taskService.getColumns(selectedProjectId.value),
       taskService.getAll(taskParams),
       userService.getAll().catch(() => []),
+      projectService.getMembers(selectedProjectId.value).catch(() => []),
     ])
+    projectMembers.value = members || []
     const userMap = Object.fromEntries((allUsers || []).map(u => [u.id, u]))
 
     const tasksByColumn = {}
@@ -225,6 +248,7 @@ async function onProjectChange() {
 }
 
 async function handleTaskMoved({ taskId, columnId }) {
+  if (!canEditTasks.value) return
   try {
     await taskService.moveColumn(taskId, columnId)
     await loadColumns()
@@ -232,6 +256,7 @@ async function handleTaskMoved({ taskId, columnId }) {
 }
 
 async function handleAddTask({ columnId, title }) {
+  if (!canEditTasks.value) return
   if (!selectedProjectId.value) return
   try {
     await taskService.create({
