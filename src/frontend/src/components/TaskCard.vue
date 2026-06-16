@@ -3,6 +3,10 @@
     class="relative overflow-hidden rounded-2xl border bg-surface-container-lowest p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
     :class="task.done ? 'border-outline-variant/50 opacity-80' : 'border-outline-variant hover:border-primary/50'"
   >
+    <div v-if="task.thumbnail" class="mb-3 h-28 overflow-hidden rounded-xl bg-surface-container">
+      <img :src="task.thumbnail" class="h-full w-full object-cover transition-transform duration-300 hover:scale-105" alt="" />
+    </div>
+
     <div class="flex items-start justify-between gap-2">
       <div class="flex flex-wrap gap-1">
         <span

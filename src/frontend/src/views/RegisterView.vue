@@ -8,7 +8,19 @@
       <span class="material-symbols-outlined">{{ isDark ? 'light_mode' : 'dark_mode' }}</span>
     </button>
 
-    <section class="app-panel w-full max-w-md p-lg md:p-xl">
+    <section class="app-panel w-full max-w-md overflow-hidden p-0">
+      <div class="relative h-36">
+        <img :src="authVisual" class="h-full w-full object-cover" alt="" />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent"></div>
+        <div class="absolute bottom-4 left-4 flex items-center gap-sm">
+          <div class="w-11 h-11 rounded-xl bg-white/90 text-primary flex items-center justify-center font-black">PM</div>
+          <div>
+            <h1 class="font-headline-sm text-headline-sm text-white">Project Manager</h1>
+            <p class="font-label-sm text-label-sm text-white/80">Team workspace</p>
+          </div>
+        </div>
+      </div>
+      <div class="p-lg md:p-xl">
       <div class="flex items-center gap-sm mb-lg">
         <div class="w-11 h-11 rounded-xl bg-primary text-on-primary flex items-center justify-center font-black">PM</div>
         <div>
@@ -83,6 +95,7 @@
         Đã có tài khoản?
         <RouterLink to="/login" class="text-primary hover:underline font-bold">Đăng nhập</RouterLink>
       </p>
+      </div>
     </section>
   </div>
 </template>
@@ -93,6 +106,7 @@ import { useRouter } from 'vue-router'
 import { authService } from '../services/api'
 import { useAuth } from '../composables/useAuth'
 import { useTheme } from '../services/theme'
+import { authVisual } from '../services/visualAssets'
 
 const router       = useRouter()
 const { login }    = useAuth()

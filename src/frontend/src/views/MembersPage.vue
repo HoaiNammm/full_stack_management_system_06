@@ -1,6 +1,8 @@
 <template>
   <div class="page-wrap">
-    <section class="page-hero">
+    <section class="page-hero overflow-hidden">
+      <img :src="authVisual" class="absolute inset-0 h-full w-full object-cover opacity-20" alt="" />
+      <div class="absolute inset-0 bg-gradient-to-r from-surface via-surface/90 to-surface/35"></div>
       <div class="relative z-10 flex flex-col gap-md lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p class="page-eyebrow">People</p>
@@ -41,6 +43,27 @@
         <p class="font-headline-lg text-headline-lg text-on-surface mt-2">{{ projects.length }}</p>
       </div>
     </div>
+
+    <div class="grid grid-cols-1 gap-md lg:grid-cols-[360px_minmax(0,1fr)]">
+      <aside class="app-panel p-md">
+        <h3 class="font-headline-sm text-headline-sm text-on-surface">Team snapshot</h3>
+        <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Avatar và vai trò nổi bật của các thành viên đang tham gia dự án.</p>
+        <div class="mt-md grid grid-cols-2 gap-sm">
+          <button
+            v-for="member in filteredMembers.slice(0, 8)"
+            :key="`card-${member.id}`"
+            @click="openMemberProject(member)"
+            class="rounded-2xl border border-outline-variant bg-surface-container-low p-sm text-left transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-md"
+          >
+            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-white font-bold shadow-sm"
+              :style="{ backgroundColor: member.color }">
+              {{ initials(member.fullName || member.email) }}
+            </div>
+            <p class="mt-2 truncate text-center font-label-lg text-label-lg text-on-surface">{{ member.fullName || member.email }}</p>
+            <p class="truncate text-center font-label-sm text-label-sm text-on-surface-variant">{{ member.projectRoles[0] || member.role || 'Member' }}</p>
+          </button>
+        </div>
+      </aside>
 
     <div class="app-panel">
       <div class="px-md py-sm border-b border-outline-variant flex flex-col gap-sm lg:flex-row lg:items-center lg:justify-between">
@@ -133,6 +156,7 @@
         </table>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
@@ -140,6 +164,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { projectService, userService } from '../services/api'
+import { authVisual } from '../services/visualAssets'
 
 const router = useRouter()
 const loading = ref(true)

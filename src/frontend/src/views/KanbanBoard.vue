@@ -87,6 +87,7 @@ import FilterBtn        from '../components/FilterBtn.vue'
 import TaskDetailModal  from '../components/TaskDetailModal.vue'
 import { useAuth } from '../composables/useAuth'
 import { projectService, taskService, userService } from '../services/api'
+import { getTaskThumbnail } from '../services/visualAssets'
 
 const route = useRoute()
 const { user } = useAuth()
@@ -155,7 +156,7 @@ function formatDeadline(d) {
   return { text: date.toLocaleDateString('vi-VN'), color: 'text-on-surface-variant' }
 }
 
-function mapTask(t, userMap = {}) {
+function mapTask(t, userMap = {}, index = 0) {
   const dl   = formatDeadline(t.dueDate || t.deadline)
   const user = t.assignedTo ? userMap[t.assignedTo] : null
   const initials = user?.fullName
@@ -171,6 +172,7 @@ function mapTask(t, userMap = {}) {
     shortId:       t.id.slice(0, 8).toUpperCase(),
     title:         t.title,
     description:   t.description || '',
+    thumbnail:     getTaskThumbnail(t, index),
     tags:          (t.tags?.length ? t.tags : [PRIORITY_MAP[t.priority] === 'high' ? 'Critical' : 'Project']).map(tag => ({ text: tag, color: tag === 'Critical' ? 'bg-error-container/30 text-error' : 'bg-primary/10 text-primary' })),
     priority:      PRIORITY_MAP[t.priority] || 'medium',
     deadline:      dl.text,
@@ -210,7 +212,7 @@ async function loadColumns() {
     for (const t of (tasks || [])) {
       const cid = t.columnId
       if (!tasksByColumn[cid]) tasksByColumn[cid] = []
-      tasksByColumn[cid].push(mapTask(t, userMap))
+      tasksByColumn[cid].push(mapTask(t, userMap, tasksByColumn[cid].length))
     }
 
     const DOT_COLORS = {

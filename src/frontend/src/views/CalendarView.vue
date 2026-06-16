@@ -1,8 +1,10 @@
 <template>
   <div class="page-wrap">
     <!-- Header -->
-    <section class="page-hero">
-      <div>
+    <section class="page-hero overflow-hidden">
+      <img :src="dashboardVisual" class="absolute inset-0 h-full w-full object-cover opacity-20" alt="" />
+      <div class="absolute inset-0 bg-gradient-to-r from-surface via-surface/85 to-surface/25"></div>
+      <div class="relative z-10">
         <h2 class="font-headline-lg text-headline-lg text-on-surface">Lịch</h2>
         <p class="font-body-md text-body-md text-on-surface-variant mt-1">Xem deadline task, sprint và milestone của tất cả dự án.</p>
       </div>
@@ -75,6 +77,7 @@ import listPlugin        from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
 import CalendarEventPopup from '../components/calendar/CalendarEventPopup.vue'
 import { projectService, taskService } from '../services/api'
+import { dashboardVisual } from '../services/visualAssets'
 
 const loading           = ref(true)
 const error             = ref('')

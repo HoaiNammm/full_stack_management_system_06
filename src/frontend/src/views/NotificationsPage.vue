@@ -1,6 +1,8 @@
 <template>
   <div class="page-wrap max-w-6xl">
-    <section class="page-hero">
+    <section class="page-hero overflow-hidden">
+      <img :src="dashboardVisual" class="absolute inset-0 h-full w-full object-cover opacity-20" alt="" />
+      <div class="absolute inset-0 bg-gradient-to-r from-surface via-surface/90 to-surface/30"></div>
       <div class="relative z-10 flex flex-col gap-md lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p class="page-eyebrow">Inbox</p>
@@ -84,6 +86,7 @@
           </div>
 
           <div class="workspace-card">
+            <img :src="notificationVisual" class="mb-md h-32 w-full rounded-xl object-cover" alt="" />
             <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
               {{ selectedNotification.content }}
             </p>
@@ -112,6 +115,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { notifyService } from '../services/api'
+import { dashboardVisual, getTaskThumbnail } from '../services/visualAssets'
 
 const notifications = ref([])
 const loading = ref(true)
@@ -132,6 +136,7 @@ const visibleNotifications = computed(() => {
 const selectedNotification = computed(() =>
   visibleNotifications.value.find(n => n.id === selectedId.value) || visibleNotifications.value[0] || null
 )
+const notificationVisual = computed(() => getTaskThumbnail({ title: selectedNotification.value?.type || 'notification' }, 2))
 
 async function load() {
   loading.value = true

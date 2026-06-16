@@ -4,7 +4,7 @@
       <div class="relative z-10 flex flex-col gap-md lg:flex-row lg:items-center lg:justify-between">
         <div class="flex items-center gap-md">
           <div class="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-on-primary font-black text-2xl shadow-sm overflow-hidden">
-            <img v-if="avatarSrc" :src="avatarSrc" class="w-full h-full object-cover" />
+            <img v-if="avatarSrc && !avatarLoadFailed" :src="avatarSrc" class="w-full h-full object-cover" @error="avatarLoadFailed = true" />
             <span v-else>{{ initial }}</span>
           </div>
           <div>
@@ -69,7 +69,7 @@
               <span class="font-label-lg text-label-lg text-on-surface">Ảnh đại diện</span>
               <div class="flex flex-col sm:flex-row sm:items-center gap-md rounded-2xl border border-outline-variant bg-surface-container-low p-md">
                 <div class="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center text-on-primary font-black text-2xl overflow-hidden">
-                  <img v-if="avatarPreviewSrc" :src="avatarPreviewSrc" class="w-full h-full object-cover" />
+                  <img v-if="avatarPreviewSrc && !avatarLoadFailed" :src="avatarPreviewSrc" class="w-full h-full object-cover" @error="avatarLoadFailed = true" />
                   <span v-else>{{ initial }}</span>
                 </div>
                 <div class="flex-1 min-w-0">
@@ -169,6 +169,7 @@ const avatarInput = ref(null)
 const profileMessage = ref('')
 const passwordMessage = ref('')
 const avatarMessage = ref('')
+const avatarLoadFailed = ref(false)
 const profileMessageType = ref('success')
 const passwordMessageType = ref('success')
 const avatarMessageType = ref('success')
@@ -262,7 +263,7 @@ async function saveProfile() {
     })
     const avatar = resolveAvatarUrl(updated.avatar || updated.avatarUrl)
     user.value = { ...updated, avatar, avatarUrl: avatar || updated.avatarUrl }
-    localStorage.setItem('user', JSON.stringify(updated))
+    localStorage.setItem('user', JSON.stringify(user.value))
     resetProfileForm()
     profileMessageType.value = 'success'
     profileMessage.value = 'Cập nhật hồ sơ thành công'
@@ -297,16 +298,43 @@ async function uploadAvatar(event) {
     const updated = await authService.uploadAvatar(file)
     const avatar = resolveAvatarUrl(updated.avatar || updated.avatarUrl)
     user.value = { ...updated, avatar, avatarUrl: avatar || updated.avatarUrl }
-    localStorage.setItem('user', JSON.stringify(updated))
+    localStorage.setItem('user', JSON.stringify(user.value))
+    avatarLoadFailed.value = false
     resetProfileForm()
     avatarMessageType.value = 'success'
     avatarMessage.value = 'Cập nhật ảnh đại diện thành công'
   } catch (e) {
-    avatarMessageType.value = 'error'
-    avatarMessage.value = e.response?.data?.message || 'Không thể upload ảnh đại diện'
+    try {
+      const dataUrl = await fileToDataUrl(file)
+      const updated = await authService.updateProfile({
+        fullName: profileForm.fullName.trim() || user.value?.fullName || 'User',
+        phoneNumber: profileForm.phoneNumber || null,
+        department: profileForm.department || null,
+        position: profileForm.position || null,
+        avatarUrl: dataUrl,
+      })
+      user.value = { ...updated, avatar: dataUrl, avatarUrl: dataUrl }
+      localStorage.setItem('user', JSON.stringify(user.value))
+      avatarLoadFailed.value = false
+      resetProfileForm()
+      avatarMessageType.value = 'success'
+      avatarMessage.value = 'Cập nhật ảnh đại diện thành công'
+    } catch (fallbackError) {
+      avatarMessageType.value = 'error'
+      avatarMessage.value = fallbackError.response?.data?.message || e.response?.data?.message || 'Không thể upload ảnh đại diện'
+    }
   } finally {
     uploadingAvatar.value = false
   }
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 }
 
 async function changePassword() {
@@ -346,4 +374,5 @@ onMounted(() => {
 })
 
 watch(user, resetProfileForm, { deep: true })
+watch(avatarPreviewSrc, () => { avatarLoadFailed.value = false })
 </script>

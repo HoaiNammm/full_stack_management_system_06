@@ -1,304 +1,204 @@
 <template>
   <div class="page-wrap">
-    <section class="gradient-panel text-on-surface shadow-xl">
-      <div class="relative grid grid-cols-1 gap-lg p-lg lg:grid-cols-[1.35fr_0.65fr] lg:p-xl">
+    <section class="dashboard-shell">
+      <header class="dashboard-header">
         <div>
-          <p class="font-label-md text-label-md uppercase tracking-wider text-primary">Workspace overview</p>
-          <h2 class="mt-2 text-[34px] font-black leading-[42px] md:text-[44px] md:leading-[52px]">
-            Quản lý dự án & phân công công việc
-          </h2>
-          <p class="mt-sm max-w-2xl font-body-lg text-body-lg text-on-surface-variant">
-            Dashboard tổng hợp dữ liệu thật từ ProjectService, TaskService và NotifyService để demo luồng nghiệp vụ hoàn chỉnh.
-          </p>
-          <div class="mt-lg flex flex-wrap gap-sm">
-            <RouterLink to="/projects" class="app-button-primary">
-              <span class="material-symbols-outlined text-[18px]">add</span>
-              Tạo dự án
-            </RouterLink>
-            <RouterLink to="/kanban" class="inline-flex items-center justify-center gap-xs rounded-lg border border-outline-variant px-md py-sm font-label-lg text-label-lg text-on-surface transition-all hover:bg-surface-container-high active:scale-95">
-              <span class="material-symbols-outlined text-[18px]">view_kanban</span>
-              Mở Kanban
-            </RouterLink>
-          </div>
+          <p class="dashboard-eyebrow">Bảng điều khiển</p>
+          <h1>Quản lý dự án & công việc</h1>
+          <span>Theo dõi tiến độ, trạng thái task và deadline từ dữ liệu API thật.</span>
         </div>
+        <div class="dashboard-actions">
+          <RouterLink to="/projects">
+            <span class="material-symbols-outlined">add</span>
+            Tạo dự án
+          </RouterLink>
+          <RouterLink to="/kanban">
+            <span class="material-symbols-outlined">view_kanban</span>
+            Mở Kanban
+          </RouterLink>
+        </div>
+      </header>
 
-        <div class="glass-card rounded-2xl p-md">
-          <div class="flex items-center justify-between">
-            <span class="font-label-md text-label-md text-on-surface-variant">Tiến độ workspace</span>
-            <span class="font-headline-sm text-headline-sm text-primary">{{ overallCompletion }}%</span>
-          </div>
-          <div class="mt-sm h-3 overflow-hidden rounded-full bg-surface-container">
-            <div class="h-full rounded-full bg-primary transition-all" :style="{ width: `${overallCompletion}%` }"></div>
-          </div>
-          <div class="mt-lg grid grid-cols-3 gap-sm">
-            <div class="metric-tile">
-              <p class="font-label-sm text-label-sm text-on-surface-variant">Projects</p>
-              <p class="font-headline-sm text-headline-sm">{{ stats.totalProjects }}</p>
-            </div>
-            <div class="metric-tile">
-              <p class="font-label-sm text-label-sm text-on-surface-variant">Tasks</p>
-              <p class="font-headline-sm text-headline-sm">{{ stats.totalTasks }}</p>
-            </div>
-            <div class="metric-tile">
-              <p class="font-label-sm text-label-sm text-on-surface-variant">Done</p>
-              <p class="font-headline-sm text-headline-sm">{{ stats.doneTasks }}</p>
-            </div>
-          </div>
-          <div class="mt-md flex items-center gap-xs text-on-surface-variant">
-            <span class="material-symbols-outlined text-[18px]">calendar_today</span>
-            <span class="font-label-md text-label-md">{{ today }}</span>
-          </div>
+      <div v-if="serviceWarnings.length" class="service-warning-grid">
+        <div v-for="warning in serviceWarnings" :key="warning" class="service-warning">
+          <span class="material-symbols-outlined">warning</span>
+          {{ warning }}
         </div>
+      </div>
+
+      <div class="kpi-grid">
+        <RouterLink v-for="metric in metricCards" :key="metric.label" :to="metric.to" class="kpi-card">
+          <div class="kpi-head">
+            <span>{{ metric.label }}</span>
+            <div class="kpi-icon" :class="metric.tone">
+              <span class="material-symbols-outlined">{{ metric.icon }}</span>
+            </div>
+          </div>
+          <strong>{{ loading ? '...' : metric.value }}</strong>
+          <p>{{ metric.caption }}</p>
+          <div class="kpi-line">
+            <i :style="{ width: `${metric.percent}%` }"></i>
+          </div>
+        </RouterLink>
+      </div>
+
+      <div class="dashboard-main-grid">
+        <section class="panel chart-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Phân bố công việc</h2>
+              <p>Biểu đồ task theo trạng thái Kanban.</p>
+            </div>
+            <RouterLink to="/tasks">Xem task</RouterLink>
+          </div>
+
+          <div class="chart-area">
+            <div v-for="item in statusChart" :key="item.label" class="chart-column">
+              <div class="chart-bar-wrap">
+                <div class="chart-bar" :style="{ height: `${Math.max(10, item.percent)}%` }"></div>
+              </div>
+              <span>{{ translateColumn(item.label) }}</span>
+              <b>{{ item.value }}</b>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel progress-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Tiến độ tổng quan</h2>
+              <p>Tính theo task ở cột hoàn tất.</p>
+            </div>
+            <span class="material-symbols-outlined panel-symbol">donut_large</span>
+          </div>
+
+          <div class="progress-compact">
+            <div class="progress-donut" :style="{ '--p': `${overallCompletion * 3.6}deg` }">
+              <div>
+                <strong>{{ overallCompletion }}</strong>
+                <span>%</span>
+              </div>
+            </div>
+
+            <div class="progress-summary">
+              <div>
+                <p>Đã hoàn thành</p>
+                <strong>{{ stats.doneTasks }}</strong>
+              </div>
+              <div>
+                <p>Đang xử lý</p>
+                <strong>{{ stats.inProgressTasks }}</strong>
+              </div>
+              <div>
+                <p>Tổng task</p>
+                <strong>{{ stats.totalTasks }}</strong>
+              </div>
+              <div>
+                <p>Sprint đang chạy</p>
+                <strong>{{ activeSprintCount }}</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="dashboard-secondary-grid">
+        <section class="panel deadline-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Deadline sắp tới</h2>
+              <p>Task gần hạn hoặc quá hạn.</p>
+            </div>
+            <RouterLink to="/calendar">Mở lịch</RouterLink>
+          </div>
+          <div class="stack-list">
+            <button v-for="task in riskTasks" :key="task.id"
+              @click="$router.push({ path: '/kanban', query: { projectId: task.projectId } })"
+              class="deadline-row">
+              <span class="material-symbols-outlined" :class="task.overdue ? 'is-danger' : 'is-warning'">event_upcoming</span>
+              <div>
+                <strong>{{ displayText(task.title) }}</strong>
+                <small>
+                  <b>{{ task.overdue ? 'Quá hạn' : 'Gần hạn' }}</b>
+                  <i></i>
+                  {{ formatDate(task.dueDate) }}
+                </small>
+              </div>
+            </button>
+            <div v-if="riskTasks.length === 0" class="empty-state">Không có deadline rủi ro.</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Thành viên đang bận</h2>
+              <p>Workload theo người được giao.</p>
+            </div>
+            <RouterLink to="/members">Xem đội ngũ</RouterLink>
+          </div>
+          <div class="stack-list">
+            <RouterLink v-for="member in memberWorkload" :key="member.id" to="/members" class="member-row">
+              <div class="avatar" :style="{ backgroundColor: member.color }">{{ member.initials }}</div>
+              <div class="row-main">
+                <div class="row-title">
+                  <strong>{{ member.name }}</strong>
+                  <span>{{ member.count }} task</span>
+                </div>
+                <div class="line-progress">
+                  <i :style="{ width: `${member.percent}%` }"></i>
+                </div>
+              </div>
+            </RouterLink>
+            <div v-if="memberWorkload.length === 0" class="empty-state">Chưa có task được giao.</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Dự án gần đây</h2>
+              <p>Các dự án có dữ liệu task và tiến độ.</p>
+            </div>
+            <RouterLink to="/projects">Xem dự án</RouterLink>
+          </div>
+          <div class="stack-list">
+            <RouterLink v-for="project in recentProjects" :key="project.id" :to="`/projects/${project.id}`" class="project-row">
+              <div class="row-icon" :style="{ backgroundColor: project.color }">
+                <span class="material-symbols-outlined">folder</span>
+              </div>
+              <div class="row-main">
+                <div class="row-title">
+                  <strong>{{ displayText(project.name) }}</strong>
+                  <span>{{ project.percent }}%</span>
+                </div>
+                <div class="line-progress">
+                  <i :style="{ width: `${project.percent}%` }"></i>
+                </div>
+                <small>{{ project.done }} / {{ project.total }} task hoàn thành</small>
+              </div>
+            </RouterLink>
+            <div v-if="recentProjects.length === 0" class="empty-state">Chưa có dự án.</div>
+          </div>
+        </section>
       </div>
     </section>
-
-    <div v-if="serviceWarnings.length" class="grid grid-cols-1 md:grid-cols-3 gap-sm">
-      <div v-for="warning in serviceWarnings" :key="warning"
-        class="rounded-xl border border-error/20 bg-error-container/20 px-md py-sm text-error font-label-md text-label-md flex items-center gap-2">
-        <span class="material-symbols-outlined text-[18px]">warning</span>
-        {{ warning }}
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-md">
-      <RouterLink to="/projects" class="block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
-        <StatCard icon="folder_copy" label="Tổng dự án" :value="loading ? '...' : stats.totalProjects"
-          :badge="`${stats.activeProjects} active`" badgeColor="text-secondary bg-secondary-container/30"
-          iconBg="bg-primary/10 text-primary" />
-      </RouterLink>
-      <RouterLink to="/members" class="block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
-        <StatCard icon="group" label="Thành viên" :value="loading ? '...' : stats.totalMembers"
-          badge="Members" badgeColor="text-secondary bg-secondary-container/30"
-          iconBg="bg-secondary/10 text-secondary" />
-      </RouterLink>
-      <RouterLink to="/tasks" class="block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
-        <StatCard icon="task_alt" label="Tổng task" :value="loading ? '...' : stats.totalTasks"
-          badge="All" badgeColor="text-primary bg-primary/10"
-          iconBg="bg-primary/10 text-primary" />
-      </RouterLink>
-      <RouterLink :to="{ path: '/tasks', query: { status: 'done' } }" class="block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
-        <StatCard icon="check_circle" label="Hoàn thành" :value="loading ? '...' : stats.doneTasks"
-          badge="Done" badgeColor="text-secondary bg-secondary-container/30"
-          iconBg="bg-secondary/10 text-secondary" />
-      </RouterLink>
-      <RouterLink :to="{ path: '/tasks', query: { status: 'active' } }" class="block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
-        <StatCard icon="sync" label="Đang thực hiện" :value="loading ? '...' : stats.inProgressTasks"
-          badge="Active" badgeColor="text-primary bg-primary/10"
-          iconBg="bg-primary/10 text-primary" />
-      </RouterLink>
-      <RouterLink to="/notifications" class="block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
-        <StatCard icon="notifications" label="Thông báo mới" :value="notifLoading ? '...' : stats.unreadNotifs"
-          badge="Unread" badgeColor="text-tertiary bg-tertiary/10"
-          iconBg="bg-tertiary/10 text-tertiary" />
-      </RouterLink>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-lg">
-      <section class="workspace-card lg:col-span-2">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="font-headline-sm text-headline-sm text-on-surface">Project health</h3>
-            <p class="font-body-sm text-body-sm text-on-surface-variant">Tổng quan sức khỏe dự án theo tiến độ và task rủi ro.</p>
-          </div>
-          <RouterLink to="/projects" class="font-label-md text-label-md text-primary hover:underline">Portfolio</RouterLink>
-        </div>
-        <div class="mt-md grid grid-cols-1 md:grid-cols-3 gap-sm">
-          <div v-for="item in healthCards" :key="item.label" class="metric-tile">
-            <div class="flex items-center justify-between">
-              <span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{{ item.label }}</span>
-              <span class="material-symbols-outlined text-[20px]" :class="item.color">{{ item.icon }}</span>
-            </div>
-            <p class="font-headline-lg text-headline-lg text-on-surface mt-2">{{ item.value }}</p>
-            <p class="font-label-sm text-label-sm text-on-surface-variant">{{ item.caption }}</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="workspace-card">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="font-headline-sm text-headline-sm text-on-surface">Sprint progress</h3>
-            <p class="font-body-sm text-body-sm text-on-surface-variant">Sprint đang hoạt động.</p>
-          </div>
-          <span class="material-symbols-outlined text-primary">sprint</span>
-        </div>
-        <div class="mt-md flex flex-col gap-sm">
-          <div class="rounded-xl bg-surface-container-low p-sm">
-            <div class="flex items-center justify-between">
-              <span class="font-label-md text-label-md text-on-surface-variant">Active sprint</span>
-              <span class="font-headline-sm text-headline-sm text-primary">{{ activeSprintCount }}</span>
-            </div>
-            <div class="mt-2 h-2 rounded-full bg-surface-container overflow-hidden">
-              <div class="h-full rounded-full bg-primary" :style="{ width: `${sprintCoverage}%` }"></div>
-            </div>
-          </div>
-          <p class="font-label-sm text-label-sm text-on-surface-variant">
-            {{ sprintCoverage }}% dự án có sprint đang chạy.
-          </p>
-        </div>
-      </section>
-    </div>
-
-    <div class="grid grid-cols-1 xl:grid-cols-[1.35fr_0.65fr] gap-lg">
-      <section class="app-panel">
-        <div class="flex items-center justify-between border-b border-outline-variant px-md py-sm">
-          <div>
-            <h3 class="font-headline-sm text-headline-sm text-on-surface">Recent projects</h3>
-            <p class="font-body-sm text-body-sm text-on-surface-variant">Các dự án đang có task và tiến độ.</p>
-          </div>
-          <RouterLink to="/projects" class="font-label-md text-label-md text-primary hover:underline">Xem tất cả</RouterLink>
-        </div>
-        <div v-if="loading" class="p-lg text-on-surface-variant flex items-center gap-2">
-          <span class="material-symbols-outlined animate-spin">progress_activity</span>
-          Đang tải...
-        </div>
-        <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-md p-md">
-          <RouterLink v-for="item in recentProjects" :key="item.id" :to="`/projects/${item.id}`"
-            class="rounded-xl border border-outline-variant bg-surface-container-low p-md transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-md">
-            <div class="flex items-start gap-sm">
-              <div class="w-11 h-11 rounded-xl text-white font-bold flex items-center justify-center" :style="{ backgroundColor: item.color }">
-                {{ item.initials }}
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="font-label-lg text-label-lg text-on-surface truncate">{{ item.name }}</p>
-                <p class="font-label-sm text-label-sm text-on-surface-variant">{{ item.done }} / {{ item.total }} task hoàn thành</p>
-              </div>
-              <span class="font-label-md text-label-md text-primary">{{ item.percent }}%</span>
-            </div>
-            <div class="mt-md h-2 overflow-hidden rounded-full bg-surface-container">
-              <div class="h-full rounded-full bg-primary" :style="{ width: `${item.percent}%` }"></div>
-            </div>
-          </RouterLink>
-        </div>
-      </section>
-
-      <section class="app-panel">
-        <div class="border-b border-outline-variant px-md py-sm">
-          <h3 class="font-headline-sm text-headline-sm text-on-surface">Task distribution</h3>
-          <p class="font-body-sm text-body-sm text-on-surface-variant">Theo trạng thái Kanban.</p>
-        </div>
-        <div class="p-md flex flex-col gap-md">
-          <div v-for="slice in statusChart" :key="slice.label" class="rounded-lg bg-surface-container-low p-sm">
-            <div class="flex items-center justify-between">
-              <span class="font-label-md text-label-md text-on-surface flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full" :class="slice.dot"></span>
-                {{ slice.label }}
-              </span>
-              <span class="font-label-md text-label-md text-on-surface-variant">{{ slice.value }}</span>
-            </div>
-            <div class="mt-2 h-2 rounded-full bg-surface-container overflow-hidden">
-              <div class="h-full rounded-full" :class="slice.bar" :style="{ width: `${slice.percent}%` }"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-lg">
-      <section class="app-panel">
-        <div class="border-b border-outline-variant px-md py-sm">
-          <h3 class="font-headline-sm text-headline-sm text-on-surface">Workload</h3>
-          <p class="font-body-sm text-body-sm text-on-surface-variant">Task theo thành viên.</p>
-        </div>
-        <div class="p-md flex flex-col gap-sm">
-          <div v-if="memberWorkload.length === 0" class="text-on-surface-variant font-body-md text-body-md">
-            Chưa có task được giao.
-          </div>
-          <RouterLink v-for="member in memberWorkload" :key="member.id" to="/members"
-            class="flex items-center gap-3 rounded-lg p-sm hover:bg-surface-container-low transition-colors">
-            <div class="w-9 h-9 rounded-full text-white font-bold text-[12px] flex items-center justify-center"
-              :style="{ backgroundColor: member.color }">{{ member.initials }}</div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between">
-                <span class="font-label-lg text-label-lg text-on-surface truncate">{{ member.name }}</span>
-                <span class="font-label-md text-label-md text-on-surface-variant">{{ member.count }}</span>
-              </div>
-              <div class="h-1.5 rounded-full bg-surface-container overflow-hidden mt-1">
-                <div class="h-full rounded-full bg-secondary" :style="{ width: `${member.percent}%` }"></div>
-              </div>
-            </div>
-          </RouterLink>
-        </div>
-      </section>
-
-      <section class="app-panel">
-        <div class="border-b border-outline-variant px-md py-sm">
-          <h3 class="font-headline-sm text-headline-sm text-on-surface">Upcoming deadlines</h3>
-          <p class="font-body-sm text-body-sm text-on-surface-variant">Task gần hạn hoặc quá hạn.</p>
-        </div>
-        <div class="p-md flex flex-col gap-sm">
-          <div v-if="riskTasks.length === 0" class="font-body-md text-body-md text-on-surface-variant">
-            Không có task rủi ro.
-          </div>
-          <button v-for="task in riskTasks" :key="task.id"
-            @click="$router.push({ path: '/kanban', query: { projectId: task.projectId } })"
-            class="text-left rounded-xl border border-outline-variant bg-surface-container-low p-sm hover:border-primary hover:shadow-sm transition-all">
-            <p class="font-label-lg text-label-lg text-on-surface line-clamp-1">{{ task.title }}</p>
-            <p class="font-label-sm text-label-sm" :class="task.overdue ? 'text-error' : 'text-tertiary'">
-              {{ task.overdue ? 'Quá hạn' : 'Gần hạn' }} · {{ formatDate(task.dueDate) }}
-            </p>
-          </button>
-        </div>
-      </section>
-
-      <section class="app-panel">
-        <div class="border-b border-outline-variant px-md py-sm flex items-center justify-between">
-          <div>
-            <h3 class="font-headline-sm text-headline-sm text-on-surface">Notifications</h3>
-            <p class="font-body-sm text-body-sm text-on-surface-variant">Thông báo mới nhất.</p>
-          </div>
-          <RouterLink to="/notifications" class="font-label-md text-label-md text-primary hover:underline">Mở</RouterLink>
-        </div>
-        <div class="p-md flex flex-col gap-sm">
-          <div v-if="notifications.length === 0" class="font-body-md text-body-md text-on-surface-variant">
-            Không có thông báo mới.
-          </div>
-          <RouterLink v-for="n in notifications.slice(0, 5)" :key="n.id" to="/notifications"
-            class="rounded-xl border border-outline-variant bg-surface-container-low p-sm flex items-start gap-2 hover:border-primary transition-colors">
-            <span class="material-symbols-outlined text-primary text-[18px] mt-0.5">{{ notifIcon(n.type) }}</span>
-            <div class="min-w-0">
-              <p class="font-label-lg text-label-lg text-on-surface line-clamp-1">{{ n.title || n.message || n.content }}</p>
-              <p class="font-label-sm text-label-sm text-on-surface-variant">{{ relativeTime(n.createdAt) }}</p>
-            </div>
-          </RouterLink>
-        </div>
-      </section>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import StatCard from '../components/StatCard.vue'
-import { notifyService, projectService, taskService, userService } from '../services/api'
+import { projectService, taskService, userService } from '../services/api'
 
-const today = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })
 const loading = ref(true)
-const notifLoading = ref(true)
 const serviceWarnings = ref([])
 const projects = ref([])
 const users = ref([])
 const tasks = ref([])
 const columnsByProject = ref({})
 const sprintsByProject = ref({})
-const notifications = ref([])
-const unreadCount = ref(0)
 
-const colors = ['#3525cd', '#006a61', '#684000', '#ba1a1a', '#0f5e9c', '#6a0dad', '#2e7d32', '#e65100']
-
-const stats = computed(() => {
-  const doneColumnIds = doneColumns.value
-  const liveTasks = tasks.value.filter(t => !t.deletedAt)
-  return {
-    totalProjects: projects.value.length,
-    activeProjects: projects.value.filter(p => p.status === 1).length,
-    totalMembers: users.value.length,
-    totalTasks: liveTasks.length,
-    doneTasks: liveTasks.filter(t => doneColumnIds.has(t.columnId)).length,
-    inProgressTasks: liveTasks.filter(t => !doneColumnIds.has(t.columnId)).length,
-    unreadNotifs: unreadCount.value,
-  }
-})
+const colors = ['#2563eb', '#059669', '#b45309', '#dc2626', '#7c3aed', '#0891b2', '#16a34a', '#ea580c']
 
 const doneColumns = computed(() => {
   const ids = new Set()
@@ -310,24 +210,18 @@ const doneColumns = computed(() => {
   return ids
 })
 
-const projectProgress = computed(() => {
-  return projects.value.map((p, index) => {
-    const projectTasks = tasks.value.filter(t => t.projectId === p.id && !t.deletedAt)
-    const done = projectTasks.filter(t => doneColumns.value.has(t.columnId)).length
-    const total = projectTasks.length
-    return {
-      id: p.id,
-      name: p.name,
-      color: p.color || colors[index % colors.length],
-      initials: initials(p.name),
-      done,
-      total,
-      percent: total ? Math.round((done / total) * 100) : 0,
-    }
-  }).sort((a, b) => b.percent - a.percent)
+const stats = computed(() => {
+  const doneColumnIds = doneColumns.value
+  const liveTasks = tasks.value.filter(t => !t.deletedAt)
+  return {
+    totalProjects: projects.value.length,
+    activeProjects: projects.value.filter(p => p.status === 1).length,
+    totalMembers: users.value.length,
+    totalTasks: liveTasks.length,
+    doneTasks: liveTasks.filter(t => doneColumnIds.has(t.columnId)).length,
+    inProgressTasks: liveTasks.filter(t => !doneColumnIds.has(t.columnId)).length,
+  }
 })
-
-const recentProjects = computed(() => projectProgress.value.slice(0, 4))
 
 const overallCompletion = computed(() => {
   const total = stats.value.totalTasks
@@ -340,46 +234,70 @@ const activeSprintCount = computed(() => {
     .filter(sprint => sprint.status === 1).length
 })
 
-const sprintCoverage = computed(() => {
-  const total = projects.value.length
-  if (!total) return 0
-  const withActive = projects.value.filter(project =>
-    (sprintsByProject.value[project.id] || []).some(sprint => sprint.status === 1)
-  ).length
-  return Math.round((withActive / total) * 100)
-})
-
-const healthCards = computed(() => [
+const metricCards = computed(() => [
   {
-    label: 'Healthy',
-    value: projectProgress.value.filter(project => project.percent >= 60).length,
-    caption: 'Dự án tiến độ tốt',
-    icon: 'verified',
-    color: 'text-secondary',
+    label: 'Tổng dự án',
+    value: stats.value.totalProjects,
+    caption: `${stats.value.activeProjects} dự án đang chạy`,
+    icon: 'folder_shared',
+    tone: 'tone-primary',
+    percent: stats.value.totalProjects ? 100 : 0,
+    to: '/projects',
   },
   {
-    label: 'Watch',
-    value: projectProgress.value.filter(project => project.percent > 0 && project.percent < 60).length,
-    caption: 'Cần theo dõi',
-    icon: 'visibility',
-    color: 'text-tertiary',
+    label: 'Tổng task',
+    value: stats.value.totalTasks,
+    caption: 'Toàn bộ công việc',
+    icon: 'task_alt',
+    tone: 'tone-info',
+    percent: stats.value.totalTasks ? 100 : 0,
+    to: '/tasks',
   },
   {
-    label: 'Risk',
-    value: riskTasks.value.length,
-    caption: 'Task gần hạn/quá hạn',
-    icon: 'warning',
-    color: 'text-error',
+    label: 'Đang thực hiện',
+    value: stats.value.inProgressTasks,
+    caption: 'Task chưa hoàn tất',
+    icon: 'sync',
+    tone: 'tone-warning',
+    percent: stats.value.totalTasks ? Math.round((stats.value.inProgressTasks / stats.value.totalTasks) * 100) : 0,
+    to: { path: '/tasks', query: { status: 'active' } },
+  },
+  {
+    label: 'Hoàn thành',
+    value: stats.value.doneTasks,
+    caption: 'Task đã xong',
+    icon: 'check_circle',
+    tone: 'tone-success',
+    percent: overallCompletion.value,
+    to: { path: '/tasks', query: { status: 'done' } },
   },
 ])
 
+const projectProgress = computed(() => {
+  return projects.value.map((p, index) => {
+    const projectTasks = tasks.value.filter(t => t.projectId === p.id && !t.deletedAt)
+    const done = projectTasks.filter(t => doneColumns.value.has(t.columnId)).length
+    const total = projectTasks.length
+    return {
+      id: p.id,
+      name: p.name,
+      color: p.color || colors[index % colors.length],
+      done,
+      total,
+      percent: total ? Math.round((done / total) * 100) : 0,
+    }
+  }).sort((a, b) => b.percent - a.percent)
+})
+
+const recentProjects = computed(() => projectProgress.value.slice(0, 4))
+
 const statusChart = computed(() => {
   const buckets = [
-    { label: 'Backlog', match: col => col.type === 'backlog' || /backlog/i.test(col.name), value: 0, dot: 'bg-outline', bar: 'bg-outline' },
-    { label: 'To Do', match: col => /to do|todo/i.test(col.name), value: 0, dot: 'bg-primary', bar: 'bg-primary' },
-    { label: 'In Progress', match: col => /progress|doing/i.test(col.name), value: 0, dot: 'bg-tertiary', bar: 'bg-tertiary' },
-    { label: 'Review / Testing', match: col => /review|test/i.test(col.name), value: 0, dot: 'bg-secondary', bar: 'bg-secondary' },
-    { label: 'Done', match: col => col.type === 'done' || /done|hoàn thành/i.test(col.name), value: 0, dot: 'bg-secondary', bar: 'bg-secondary' },
+    { label: 'Backlog', match: col => col.type === 'backlog' || /backlog/i.test(col.name), value: 0 },
+    { label: 'To Do', match: col => /to do|todo/i.test(col.name), value: 0 },
+    { label: 'In Progress', match: col => /progress|doing/i.test(col.name), value: 0 },
+    { label: 'Review', match: col => /review|test/i.test(col.name), value: 0 },
+    { label: 'Done', match: col => col.type === 'done' || /done|hoàn thành/i.test(col.name), value: 0 },
   ]
   const colMap = new Map()
   for (const cols of Object.values(columnsByProject.value)) {
@@ -414,7 +332,7 @@ const memberWorkload = computed(() => {
       }
     })
     .sort((a, b) => b.count - a.count)
-    .slice(0, 6)
+    .slice(0, 5)
 })
 
 const riskTasks = computed(() => {
@@ -428,11 +346,11 @@ const riskTasks = computed(() => {
     })
     .filter(t => t.overdue || t.soon)
     .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
-    .slice(0, 6)
+    .slice(0, 5)
 })
 
 function initials(name) {
-  return (name || '').split(' ').filter(Boolean).map(w => w[0]).slice(0, 3).join('').toUpperCase() || 'PR'
+  return (name || '').split(' ').filter(Boolean).map(w => w[0]).slice(0, 3).join('').toUpperCase() || 'ND'
 }
 
 function formatDate(date) {
@@ -440,25 +358,42 @@ function formatDate(date) {
   return new Date(date).toLocaleDateString('vi-VN')
 }
 
-function relativeTime(dateStr) {
-  if (!dateStr) return ''
-  const diff = Date.now() - new Date(dateStr)
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'Vừa xong'
-  if (mins < 60) return `${mins} phút trước`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs} giờ trước`
-  return `${Math.floor(hrs / 24)} ngày trước`
+function translateColumn(label) {
+  const map = {
+    Backlog: 'Tồn đọng',
+    'To Do': 'Cần làm',
+    'In Progress': 'Đang làm',
+    Review: 'Đánh giá',
+    Done: 'Hoàn tất',
+  }
+  return map[label] || label
 }
 
-function notifIcon(type) {
-  const map = {
-    task_assigned: 'person_add',
-    task_column_changed: 'swap_horiz',
-    member_added: 'group_add',
-    comment_mention: 'alternate_email',
+function displayText(value) {
+  const text = String(value || '')
+  const normalized = text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+
+  const replacements = [
+    ['demo thuyet trinh', 'DEMO THUYẾT TRÌNH'],
+    ['he thong quan ly du an va phan cong cong viec', 'Hệ thống quản lý dự án và phân công công việc'],
+    ['phan tich yeu cau va ve luong nghiep vu', 'Phân tích yêu cầu và vẽ luồng nghiệp vụ'],
+    ['xay dung api project va member', 'Xây dựng API Project và Member'],
+    ['thiet ke giao dien dashboard', 'Thiết kế giao diện Dashboard'],
+    ['thiet ke giao dien dash', 'Thiết kế giao diện Dashboard'],
+    ['cau hinh dark mode', 'Cấu hình dark mode'],
+    ['tran thi dev', 'Trần Thị Dev'],
+    ['le van tester', 'Lê Văn Tester'],
+    ['nguyen van pm', 'Nguyễn Văn PM'],
+  ]
+
+  let result = text
+  for (const [plain, pretty] of replacements) {
+    result = result.replace(new RegExp(plain, 'ig'), pretty)
   }
-  return map[type] || 'notifications'
+  return result
 }
 
 async function loadDashboard() {
@@ -497,21 +432,536 @@ async function loadDashboard() {
   } finally {
     loading.value = false
   }
-
-  notifLoading.value = true
-  try {
-    const [notifs, count] = await Promise.all([
-      notifyService.getAll().catch(() => []),
-      notifyService.unreadCount().catch(() => 0),
-    ])
-    notifications.value = notifs || []
-    unreadCount.value = count || 0
-  } catch {
-    serviceWarnings.value.push('Notification API chưa sẵn sàng')
-  } finally {
-    notifLoading.value = false
-  }
 }
 
 onMounted(loadDashboard)
 </script>
+
+<style scoped>
+.dashboard-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.dashboard-eyebrow {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgb(var(--color-primary));
+}
+
+.dashboard-header h1 {
+  margin-top: 4px;
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.08;
+  font-weight: 950;
+  color: rgb(var(--color-on-surface));
+}
+
+.dashboard-header span {
+  margin-top: 6px;
+  display: block;
+  max-width: 720px;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dashboard-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  border-radius: 12px;
+  background: rgb(var(--color-primary));
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 900;
+  color: rgb(var(--color-on-primary));
+  box-shadow: 0 12px 28px rgb(var(--color-primary) / .18);
+}
+
+.dashboard-actions a:last-child {
+  background: rgb(var(--color-surface-container-lowest));
+  color: rgb(var(--color-on-surface));
+  box-shadow: inset 0 0 0 1px rgb(var(--color-outline-variant));
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.kpi-card,
+.panel {
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 16px;
+  background: rgb(var(--color-surface-container-lowest));
+  box-shadow: 0 10px 24px rgb(var(--color-outline) / .07);
+}
+
+.kpi-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "label icon"
+    "value icon"
+    "caption caption"
+    "line line";
+  align-items: center;
+  min-height: 68px;
+  padding: 9px 11px 8px;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 42px rgb(var(--color-outline) / .12);
+}
+
+.kpi-head {
+  display: contents;
+}
+
+.kpi-head > span {
+  grid-area: label;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.kpi-icon {
+  grid-area: icon;
+  display: flex;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.kpi-icon .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.kpi-card strong {
+  grid-area: value;
+  display: block;
+  margin-top: 3px;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 950;
+  color: rgb(var(--color-on-surface));
+}
+
+.kpi-card p {
+  grid-area: caption;
+  min-width: 0;
+  overflow: hidden;
+  margin-top: 1px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.kpi-line {
+  grid-area: line;
+  height: 3px;
+  overflow: hidden;
+  margin-top: 7px;
+  border-radius: 999px;
+  background: rgb(var(--color-surface-container));
+}
+
+.kpi-line i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgb(var(--color-primary)), rgb(var(--color-secondary)));
+}
+
+.tone-primary { color: rgb(var(--color-primary)); background: rgb(var(--color-primary) / .12); }
+.tone-info { color: #0284c7; background: rgba(2, 132, 199, .12); }
+.tone-warning { color: #b45309; background: rgba(180, 83, 9, .12); }
+.tone-success { color: rgb(var(--color-secondary)); background: rgb(var(--color-secondary) / .12); }
+
+.dashboard-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 12px;
+}
+
+.dashboard-secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.panel {
+  padding: 14px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-head h2 {
+  font-size: 15px;
+  font-weight: 950;
+  color: rgb(var(--color-on-surface));
+}
+
+.panel-head p,
+.panel-head a {
+  margin-top: 3px;
+  font-size: 12px;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.panel-head a {
+  font-weight: 800;
+  color: rgb(var(--color-primary));
+}
+
+.panel-symbol {
+  color: rgb(var(--color-primary));
+}
+
+.chart-area {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  min-height: 205px;
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgb(var(--color-surface-container-low));
+}
+
+.chart-column {
+  display: grid;
+  grid-template-rows: 1fr auto auto;
+  align-items: end;
+  gap: 6px;
+  text-align: center;
+}
+
+.chart-bar-wrap {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  height: 135px;
+}
+
+.chart-bar {
+  width: min(54px, 72%);
+  min-height: 12px;
+  border-radius: 12px 12px 4px 4px;
+  background: linear-gradient(180deg, rgb(var(--color-primary)), rgb(var(--color-secondary)));
+  box-shadow: 0 12px 24px rgb(var(--color-primary) / .20);
+}
+
+.chart-column span {
+  font-size: 12px;
+  font-weight: 800;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.chart-column b {
+  font-size: 13px;
+  color: rgb(var(--color-on-surface));
+}
+
+.progress-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.progress-compact {
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.progress-donut {
+  display: grid;
+  width: 124px;
+  height: 124px;
+  place-items: center;
+  border-radius: 999px;
+  background: conic-gradient(rgb(var(--color-primary)) var(--p), rgb(var(--color-surface-container)) 0);
+}
+
+.progress-donut > div {
+  display: grid;
+  width: 82px;
+  height: 82px;
+  place-items: center;
+  border-radius: inherit;
+  background: rgb(var(--color-surface-container-lowest));
+  box-shadow: inset 0 0 0 1px rgb(var(--color-outline-variant));
+}
+
+.progress-donut strong {
+  font-size: 28px;
+  line-height: .9;
+  font-weight: 950;
+}
+
+.progress-donut span {
+  font-size: 12px;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.progress-summary {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.progress-summary div {
+  border-radius: 10px;
+  background: rgb(var(--color-surface-container-low));
+  padding: 8px 10px;
+}
+
+.progress-summary p {
+  font-size: 10px;
+  font-weight: 800;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.progress-summary strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.stack-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.project-row,
+.deadline-row,
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  border-radius: 12px;
+  background: rgb(var(--color-surface-container-low));
+  padding: 9px;
+  text-align: left;
+  transition: background .18s ease, transform .18s ease;
+}
+
+.project-row:hover,
+.deadline-row:hover,
+.member-row:hover {
+  transform: translateY(-1px);
+  background: rgb(var(--color-surface-container-high));
+}
+
+.row-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  place-items: center;
+  border-radius: 14px;
+  color: white;
+}
+
+.avatar {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  color: white;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.row-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.row-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.row-title strong,
+.deadline-row strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: rgb(var(--color-on-surface));
+}
+
+.row-title span,
+.project-row small,
+.deadline-row small {
+  font-size: 11px;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.deadline-row small {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 3px;
+}
+
+.deadline-row small b {
+  font-weight: 900;
+  color: rgb(var(--color-error));
+}
+
+.deadline-row small i {
+  display: block;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgb(var(--color-outline));
+}
+
+.line-progress {
+  height: 6px;
+  overflow: hidden;
+  margin-top: 7px;
+  border-radius: 999px;
+  background: rgb(var(--color-surface-container));
+}
+
+.line-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgb(var(--color-primary)), rgb(var(--color-secondary)));
+}
+
+.deadline-row .material-symbols-outlined {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  place-items: center;
+  border-radius: 12px;
+  background: rgb(var(--color-primary) / .10);
+  color: rgb(var(--color-primary));
+  font-size: 20px;
+}
+
+.deadline-row .is-danger {
+  background: rgb(var(--color-error-container) / .45);
+  color: rgb(var(--color-error));
+}
+
+.deadline-row .is-warning {
+  background: rgb(var(--color-tertiary) / .12);
+  color: rgb(var(--color-tertiary));
+}
+
+.empty-state {
+  border-radius: 14px;
+  border: 1px dashed rgb(var(--color-outline-variant));
+  padding: 14px;
+  font-size: 13px;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.service-warning-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.service-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 14px;
+  background: rgb(var(--color-error-container) / .28);
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgb(var(--color-error));
+}
+
+@media (max-width: 980px) {
+  .dashboard-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-grid,
+  .dashboard-secondary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .dashboard-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .kpi-grid,
+  .dashboard-secondary-grid,
+  .service-warning-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-area {
+    overflow-x: auto;
+    grid-template-columns: repeat(5, 120px);
+  }
+
+  .progress-compact {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

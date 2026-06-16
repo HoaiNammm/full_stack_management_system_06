@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Dashboard      from '../views/Dashboard.vue'
+import LandingView    from '../views/LandingView.vue'
 import KanbanBoard    from '../views/KanbanBoard.vue'
 import ProjectsPage   from '../views/ProjectsPage.vue'
 import ProjectDetail  from '../views/ProjectDetail.vue'
@@ -14,7 +15,7 @@ import SystemStatusPage   from '../views/SystemStatusPage.vue'
 import { hasValidSession } from '../services/session'
 
 const routes = [
-  { path: '/',           redirect: '/dashboard' },
+  { path: '/',           component: LandingView, meta: { public: true } },
   { path: '/login',      component: LoginView,    meta: { public: true } },
   { path: '/register',   component: RegisterView, meta: { public: true } },
   { path: '/dashboard',  component: Dashboard },

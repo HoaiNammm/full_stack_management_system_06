@@ -9,9 +9,21 @@
     </button>
 
     <div class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-lg items-stretch">
-      <section class="hidden lg:flex app-panel p-xl flex-col justify-between min-h-[560px]">
+      <section class="hidden lg:flex app-panel overflow-hidden p-0 flex-col justify-between min-h-[560px]">
+        <div class="relative h-60">
+          <img :src="authVisual" class="h-full w-full object-cover" alt="" />
+          <div class="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent"></div>
+          <div class="absolute bottom-5 left-5 flex items-center gap-sm">
+            <div class="w-12 h-12 rounded-xl bg-white/90 text-primary flex items-center justify-center font-black shadow-sm">PM</div>
+            <div>
+              <h1 class="font-headline-md text-headline-md text-white">Project Manager</h1>
+              <p class="font-label-md text-label-md text-white/80">Workspace demo</p>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-1 flex-col justify-between p-xl">
         <div>
-          <div class="flex items-center gap-sm mb-xl">
+          <div class="hidden flex items-center gap-sm mb-xl">
             <div class="w-12 h-12 rounded-xl bg-primary text-on-primary flex items-center justify-center font-black shadow-sm">PM</div>
             <div>
               <h1 class="font-headline-md text-headline-md text-on-surface">Project Manager</h1>
@@ -32,6 +44,7 @@
             <p class="font-label-lg text-label-lg text-on-surface mt-2">{{ item.label }}</p>
             <p class="font-label-sm text-label-sm text-on-surface-variant">{{ item.text }}</p>
           </div>
+        </div>
         </div>
       </section>
 
@@ -103,6 +116,7 @@ import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 import { useTheme } from '../services/theme'
+import { authVisual } from '../services/visualAssets'
 
 const router = useRouter()
 const route  = useRoute()
