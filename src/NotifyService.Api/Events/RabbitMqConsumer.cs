@@ -161,8 +161,29 @@ public class RabbitMqConsumer : BackgroundService
 
     private void Cleanup()
     {
-        _channel?.Close();
-        _connection?.Close();
+        try
+        {
+            if (_channel != null && _channel.IsOpen)
+            {
+                _channel.Close();
+            }
+        }
+        catch
+        {
+            // Ignore cleanup error
+        }
+
+        try
+        {
+            if (_connection != null && _connection.IsOpen)
+            {
+                _connection.Close();
+            }
+        }
+        catch
+        {
+            // Ignore cleanup error
+        }
     }
 
     public override void Dispose()

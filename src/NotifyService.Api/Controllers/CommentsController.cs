@@ -336,18 +336,19 @@ public class CommentsController : ControllerBase
             return;
         }
 
-        var notification = new Notification
-        {
-            Id = Guid.NewGuid(),
-            TaskId = comment.TaskId,
-            ProjectId = comment.ProjectId,
-            Title = "Bạn được nhắc đến trong một bình luận",
-            Message = "Có người đã nhắc đến bạn trong một bình luận.",
-            Type = "COMMENT_MENTION",
-            SourceService = "NotifyService",
-            SourceEventId = comment.Id.ToString(),
-            CreatedAt = DateTime.UtcNow
-        };
+var notification = new Notification
+{
+    Id = Guid.NewGuid(),
+    TaskId = comment.TaskId,
+    ProjectId = comment.ProjectId,
+    Title = "Bạn được nhắc đến trong bình luận",
+    Message = "Có người đã nhắc đến bạn trong một bình luận.",
+    Type = "COMMENT_MENTION",
+    SourceService = "NotifyService",
+    SourceEventId = comment.Id.ToString(),
+    CreatedAt = DateTime.UtcNow
+};
+
 
         foreach (var mentionedUserId in mentionedUserIds)
         {
@@ -401,6 +402,89 @@ public class CommentsController : ControllerBase
 
 
     }
+
+    [Authorize]
+[HttpGet("project/{projectId:guid}")]
+public async Task<IActionResult> GetProjectComments(Guid projectId)
+{
+    var comments = await _context.Comments
+        .Where(c => c.ProjectId == projectId && !c.IsDeleted)
+        .OrderByDescending(c => c.CreatedAt)
+        .Select(c => new
+        {
+            c.Id,
+            c.ProjectId,
+            c.UserId,
+            c.Content,
+            c.CreatedAt,
+            c.UpdatedAt
+        })
+        .ToListAsync();
+
+    return Ok(new { success = true, data = comments });
+}
+
+[Authorize]
+[HttpPost("project/{projectId:guid}")]
+public async Task<IActionResult> CreateProjectComment(Guid projectId, [FromBody] CreateProjectDiscussionRequest request)
+{
+    var userId = GetCurrentUserId();
+
+    if (string.IsNullOrWhiteSpace(request.Content))
+        return BadRequest(new { success = false, message = "Nội dung bình luận không được để trống" });
+
+    var comment = new Comment
+    {
+        Id = Guid.NewGuid(),
+        ProjectId = projectId,
+        UserId = userId,
+        Content = request.Content.Trim(),
+        CreatedAt = DateTime.UtcNow,
+        IsDeleted = false
+    };
+
+    _context.Comments.Add(comment);
+
+    foreach (var recipientId in request.RecipientUserIds.Distinct())
+    {
+        if (recipientId == userId) continue;
+
+        var notification = new Notification
+{
+    Id = Guid.NewGuid(),
+    ProjectId = projectId,
+    Title = "Có thảo luận mới trong dự án",
+    Message = request.Content.Trim(),
+    Type = "project_discussion",
+    CreatedAt = DateTime.UtcNow
+};
+
+        notification.UserNotifications.Add(new UserNotification
+        {
+            Id = Guid.NewGuid(),
+            NotificationId = notification.Id,
+            UserId = recipientId,
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        _context.Notifications.Add(notification);
+    }
+
+    await _context.SaveChangesAsync();
+
+    return Ok(new { success = true, data = comment });
+}
+
+private Guid GetCurrentUserId()
+{
+    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        throw new UnauthorizedAccessException("Token không hợp lệ hoặc thiếu UserId");
+
+    return userId;
+}
 
 
 

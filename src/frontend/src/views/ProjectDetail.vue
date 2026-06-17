@@ -623,50 +623,40 @@ const activities = ref([])
 const activityLoading = ref(false)
 
 const newComment = ref('')
+const projectComments = ref([])
+const recentDiscussionActivities = ref([])
 
-const projectComments = ref([
-  {
-    id: 1,
-    author: 'Đỗ Trung Kiên',
-    avatar: 'K',
-    time: '10 phút trước',
-    content: 'Nhóm mình cần hoàn thiện phần Kanban và Activity Log trước buổi demo.',
-  },
-  {
-    id: 2,
-    author: 'Member Demo',
-    avatar: 'M',
-    time: '5 phút trước',
-    content:
-      '@Kiên phần NotifyService đã có thông báo, còn comment cấp dự án có thể demo bằng UI trước.',
-  },
-])
-
-const recentDiscussionActivities = ref([
-  { id: 1, title: 'Kiên tạo bình luận mới trong dự án', time: 'Vừa xong' },
-  { id: 2, title: 'Member Demo được mention trong comment', time: '5 phút trước' },
-  { id: 3, title: 'NotifyService ghi nhận hoạt động mới', time: '10 phút trước' },
-])
-
-function addProjectComment() {
+async function addProjectComment() {
   const content = newComment.value.trim()
-  if (!content) return
+  if (!content || !project.value?.id) return
 
-  projectComments.value.unshift({
-    id: Date.now(),
-    author: user.value?.fullName || user.value?.username || 'Member Demo',
-    avatar: (user.value?.fullName || user.value?.username || 'M').charAt(0).toUpperCase(),
-    time: 'Vừa xong',
-    content,
-  })
+  const recipientUserIds = members.value.map((m) => m.userId || m.user?.id || m.id).filter(Boolean)
 
-  recentDiscussionActivities.value.unshift({
-    id: Date.now() + 1,
-    title: 'Có bình luận mới trong dự án',
-    time: 'Vừa xong',
-  })
+  try {
+    const savedComment = await notifyService.createProjectComment(project.value.id, {
+      content,
+      recipientUserIds,
+    })
 
-  newComment.value = ''
+    projectComments.value.unshift({
+      id: savedComment.id || Date.now(),
+      author: user.value?.fullName || user.value?.username || 'Bạn',
+      avatar: (user.value?.fullName || user.value?.username || 'B').charAt(0).toUpperCase(),
+      time: 'Vừa xong',
+      content,
+    })
+
+    recentDiscussionActivities.value.unshift({
+      id: Date.now(),
+      title: 'Có bình luận mới trong dự án',
+      time: 'Vừa xong',
+    })
+
+    newComment.value = ''
+  } catch (e) {
+    console.error(e)
+    alert('Không thể gửi bình luận dự án')
+  }
 }
 
 const tabs = [
