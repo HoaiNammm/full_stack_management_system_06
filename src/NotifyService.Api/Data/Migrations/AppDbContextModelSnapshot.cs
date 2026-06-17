@@ -8,7 +8,7 @@ using NotifyService.Api.Data;
 
 #nullable disable
 
-namespace NotifyService.Api.Data.Migrations
+namespace NotifyService.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     partial class AppDbContextModelSnapshot : ModelSnapshot

@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace NotifyService.Api.Data.Migrations
+namespace NotifyService.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class CompleteAppDbContext : Migration
+    public partial class BaselineExistingDatabase : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

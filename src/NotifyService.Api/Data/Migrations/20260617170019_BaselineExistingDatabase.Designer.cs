@@ -9,11 +9,11 @@ using NotifyService.Api.Data;
 
 #nullable disable
 
-namespace NotifyService.Api.Data.Migrations
+namespace NotifyService.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260617162501_CompleteAppDbContext")]
-    partial class CompleteAppDbContext
+    [Migration("20260617170019_BaselineExistingDatabase")]
+    partial class BaselineExistingDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

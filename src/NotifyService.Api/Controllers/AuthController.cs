@@ -3,7 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NotifyService.Api.DTOs;
 using NotifyService.Api.Services;
-
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using NotifyService.Api.Configurations;
+using NotifyService.Api.Data;
+using NotifyService.Api.Models;
+using System.Security.Cryptography;
 namespace NotifyService.Api.Controllers;
 
 [ApiController]
@@ -13,39 +18,97 @@ public class AuthController : ControllerBase
     private readonly JwtService _jwtService;
     private readonly UserService _userService;
     private readonly IWebHostEnvironment _environment;
+    private readonly AppDbContext _context;
+    private readonly JwtSettings _jwtSettings;
 
-    public AuthController(JwtService jwtService, UserService userService, IWebHostEnvironment environment)
+    public AuthController(
+    JwtService jwtService,
+    UserService userService,
+    IWebHostEnvironment environment,
+    AppDbContext context,
+    IOptions<JwtSettings> jwtOptions)
     {
-        _jwtService  = jwtService;
+        _jwtService = jwtService;
         _userService = userService;
         _environment = environment;
+        _context = context;
+        _jwtSettings = jwtOptions.Value;
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var user = await _userService.GetByEmailAsync(request.Email);
+        if (string.IsNullOrWhiteSpace(request.Email) ||
+            string.IsNullOrWhiteSpace(request.Password))
+        {
+            return BadRequest(new
+            {
+                message = "Email và mật khẩu không được để trống"
+            });
+        }
 
-        if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-            return Unauthorized(new { message = "Email hoặc mật khẩu không đúng" });
+        var user = await _userService.GetByEmailAsync(request.Email.Trim());
+
+        if (user == null)
+        {
+            // Không lưu được vì LoginHistory.UserId hiện không cho phép null.
+            return Unauthorized(new
+            {
+                message = "Email hoặc mật khẩu không đúng"
+            });
+        }
+
+        var passwordCorrect = BCrypt.Net.BCrypt.Verify(
+            request.Password,
+            user.PasswordHash);
+
+        if (!passwordCorrect)
+        {
+            await SaveLoginHistoryAsync(
+                user.Id,
+                false,
+                "Mật khẩu không chính xác");
+
+            return Unauthorized(new
+            {
+                message = "Email hoặc mật khẩu không đúng"
+            });
+        }
 
         if (!user.IsActive)
-            return Unauthorized(new { message = "Tài khoản đã bị khóa" });
+        {
+            await SaveLoginHistoryAsync(
+                user.Id,
+                false,
+                "Tài khoản đã bị khóa");
+
+            return Unauthorized(new
+            {
+                message = "Tài khoản đã bị khóa"
+            });
+        }
 
         await _userService.UpdateLastLoginAsync(user.Id);
 
-        var token = _jwtService.GenerateToken(user, out var expiresAt);
+        await SaveLoginHistoryAsync(
+            user.Id,
+            true,
+            null);
+
+        var token = _jwtService.GenerateToken(
+            user,
+            out var expiresAt);
 
         return Ok(new LoginResponse
         {
-            Token     = token,
+            Token = token,
             ExpiresAt = expiresAt,
-            User      = new UserInfo
+            User = new UserInfo
             {
-                Id       = user.Id,
+                Id = user.Id,
                 FullName = user.FullName,
-                Email    = user.Email,
-                Role     = user.Role
+                Email = user.Email,
+                Role = user.Role
             }
         });
     }
@@ -62,11 +125,11 @@ public class AuthController : ControllerBase
 
         return Ok(new
         {
-            id       = user.Id,
-            email    = user.Email,
+            id = user.Id,
+            email = user.Email,
             fullName = user.FullName,
-            role     = user.Role,
-            avatar   = user.Avatar ?? user.AvatarUrl,
+            role = user.Role,
+            avatar = user.Avatar ?? user.AvatarUrl,
             phoneNumber = user.PhoneNumber,
             avatarUrl = user.AvatarUrl,
             department = user.Department,
@@ -189,4 +252,262 @@ public class AuthController : ControllerBase
             position = user.Position
         });
     }
+    [HttpPost("refresh")]
+    public async Task<IActionResult> RefreshToken(
+    [FromBody] RefreshTokenRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return BadRequest(new
+            {
+                message = "Refresh token không được để trống"
+            });
+        }
+
+        var tokenHash = _jwtService.HashToken(request.RefreshToken);
+
+        var storedToken = await _context.RefreshTokens
+            .Include(x => x.User)
+            .FirstOrDefaultAsync(x =>
+                x.Token == tokenHash &&
+                !x.IsRevoked &&
+                x.ExpiresAt > DateTime.UtcNow);
+
+        if (storedToken?.User == null || !storedToken.User.IsActive)
+        {
+            return Unauthorized(new
+            {
+                message = "Refresh token không hợp lệ hoặc đã hết hạn"
+            });
+        }
+
+        // Rotation: token cũ chỉ được dùng một lần
+        storedToken.IsRevoked = true;
+        storedToken.RevokedAt = DateTime.UtcNow;
+
+        var newRawRefreshToken = _jwtService.GenerateRefreshToken();
+
+        _context.RefreshTokens.Add(new RefreshToken
+        {
+            UserId = storedToken.UserId,
+            Token = _jwtService.HashToken(newRawRefreshToken),
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(
+                _jwtSettings.RefreshTokenExpirationDays),
+            IsRevoked = false
+        });
+
+        var accessToken = _jwtService.GenerateToken(
+            storedToken.User,
+            out var expiresAt);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new LoginResponse
+        {
+            Token = accessToken,
+            RefreshToken = newRawRefreshToken,
+            ExpiresAt = expiresAt,
+            User = new UserInfo
+            {
+                Id = storedToken.User.Id,
+                FullName = storedToken.User.FullName,
+                Email = storedToken.User.Email,
+                Role = storedToken.User.Role,
+                PhoneNumber = storedToken.User.PhoneNumber,
+                AvatarUrl = storedToken.User.AvatarUrl,
+                Department = storedToken.User.Department,
+                Position = storedToken.User.Position,
+                IsActive = storedToken.User.IsActive,
+                EmailConfirmed = storedToken.User.EmailConfirmed
+            }
+        });
+    }
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(
+    [FromBody] RefreshTokenRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return Ok(new
+            {
+                message = "Đăng xuất thành công"
+            });
+        }
+
+        var tokenHash = _jwtService.HashToken(request.RefreshToken);
+
+        var storedToken = await _context.RefreshTokens
+            .FirstOrDefaultAsync(x =>
+                x.Token == tokenHash &&
+                !x.IsRevoked);
+
+        if (storedToken != null)
+        {
+            storedToken.IsRevoked = true;
+            storedToken.RevokedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+        }
+
+        return Ok(new
+        {
+            message = "Đăng xuất thành công"
+        });
+    }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(
+    [FromBody] ForgotPasswordRequest request)
+    {
+        const string message =
+            "Nếu email tồn tại, hệ thống đã tạo yêu cầu đặt lại mật khẩu.";
+
+        if (string.IsNullOrWhiteSpace(request.Email))
+        {
+            return BadRequest(new
+            {
+                message = "Email không được để trống"
+            });
+        }
+
+        var user = await _userService.GetByEmailAsync(request.Email.Trim());
+
+        // Không thông báo email có tồn tại hay không
+        if (user == null)
+        {
+            return Ok(new { message });
+        }
+
+        var oldTokens = await _context.PasswordResetTokens
+            .Where(x =>
+                x.UserId == user.Id &&
+                !x.IsUsed &&
+                x.ExpiresAt > DateTime.UtcNow)
+            .ToListAsync();
+
+        foreach (var oldToken in oldTokens)
+        {
+            oldToken.IsUsed = true;
+            oldToken.UsedAt = DateTime.UtcNow;
+        }
+
+        var rawResetToken =
+            Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+
+        _context.PasswordResetTokens.Add(new PasswordResetToken
+        {
+            UserId = user.Id,
+            Token = _jwtService.HashToken(rawResetToken),
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(
+                _jwtSettings.PasswordResetExpirationMinutes),
+            IsUsed = false
+        });
+
+        await _context.SaveChangesAsync();
+
+        // Chỉ trả token trực tiếp khi đang phát triển.
+        // Sau này production phải gửi token qua email.
+        if (_environment.IsDevelopment())
+        {
+            return Ok(new
+            {
+                message,
+                resetToken = rawResetToken,
+                expiresInMinutes =
+                    _jwtSettings.PasswordResetExpirationMinutes
+            });
+        }
+
+        return Ok(new { message });
+    }
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(
+        [FromBody] ResetPasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Token))
+        {
+            return BadRequest(new
+            {
+                message = "Token không được để trống"
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.NewPassword) ||
+            request.NewPassword.Length < 6)
+        {
+            return BadRequest(new
+            {
+                message = "Mật khẩu mới phải có ít nhất 6 ký tự"
+            });
+        }
+
+        var tokenHash = _jwtService.HashToken(request.Token);
+
+        var resetToken = await _context.PasswordResetTokens
+            .Include(x => x.User)
+            .FirstOrDefaultAsync(x =>
+                x.Token == tokenHash &&
+                !x.IsUsed &&
+                x.ExpiresAt > DateTime.UtcNow);
+
+        if (resetToken?.User == null)
+        {
+            return BadRequest(new
+            {
+                message = "Token không hợp lệ hoặc đã hết hạn"
+            });
+        }
+
+        resetToken.User.PasswordHash =
+            BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+        resetToken.User.UpdatedAt = DateTime.UtcNow;
+
+        resetToken.IsUsed = true;
+        resetToken.UsedAt = DateTime.UtcNow;
+
+        // Sau khi đổi mật khẩu, hủy toàn bộ refresh token cũ
+        var refreshTokens = await _context.RefreshTokens
+            .Where(x =>
+                x.UserId == resetToken.UserId &&
+                !x.IsRevoked)
+            .ToListAsync();
+
+        foreach (var refreshToken in refreshTokens)
+        {
+            refreshToken.IsRevoked = true;
+            refreshToken.RevokedAt = DateTime.UtcNow;
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Đặt lại mật khẩu thành công"
+        });
+    }
+
+    private async Task SaveLoginHistoryAsync(
+    Guid userId,
+    bool isSuccess,
+    string? failureReason)
+{
+    var loginHistory = new LoginHistory
+    {
+        Id = Guid.NewGuid(),
+        UserId = userId,
+        LoginAt = DateTime.UtcNow,
+        IpAddress = HttpContext.Connection
+            .RemoteIpAddress?
+            .ToString(),
+        UserAgent = Request.Headers.UserAgent.ToString(),
+        IsSuccess = isSuccess,
+        FailureReason = failureReason
+    };
+
+    _context.LoginHistories.Add(loginHistory);
+    await _context.SaveChangesAsync();
+}
 }

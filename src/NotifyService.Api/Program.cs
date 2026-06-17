@@ -38,29 +38,31 @@ builder.Services
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
-            ValidateIssuer           = true,
-            ValidIssuer              = jwtSettings.Issuer,
-            ValidateAudience         = true,
-            ValidAudience            = jwtSettings.Audience,
-            ValidateLifetime         = true,
-            ClockSkew                = TimeSpan.Zero
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
+            ValidateIssuer = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtSettings.Audience,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
         };
     });
 
 builder.Services.AddAuthorization();
+var allowedOrigins =
+    builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? Array.Empty<string>();
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowVue", policy =>
-        policy.SetIsOriginAllowed(origin =>
-        {
-            var host = new Uri(origin).Host;
-            return host == "localhost" || host == "127.0.0.1";
-        })
-              .AllowAnyMethod().AllowAnyHeader());
+    {
+        policy
+            .WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
 });
-
 builder.Services.AddControllers()
     .AddJsonOptions(opts =>
         opts.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
@@ -70,12 +72,12 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "NotifyService API", Version = "v1" });
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Name         = "Authorization",
-        Description  = "Nhập: Bearer {token}",
-        Type         = SecuritySchemeType.Http,
-        Scheme       = "bearer",
+        Name = "Authorization",
+        Description = "Nhập: Bearer {token}",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
         BearerFormat = "JWT",
-        In           = ParameterLocation.Header
+        In = ParameterLocation.Header
     });
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
@@ -95,7 +97,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    // db.Database.Migrate();
 
     db.Database.ExecuteSqlRaw(@"
         IF COL_LENGTH('Users', 'PhoneNumber') IS NULL ALTER TABLE Users ADD PhoneNumber nvarchar(max) NULL;
@@ -171,33 +173,33 @@ using (var scope = app.Services.CreateScope())
         db.Users.AddRange(
             new NotifyService.Api.Models.User
             {
-                Id           = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-                FullName     = "Project Manager Demo",
-                Email        = "2@example.com",
+                Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                FullName = "Project Manager Demo",
+                Email = "2@example.com",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
-                Role         = "ProjectManager",
-                IsActive     = true,
-                CreatedAt    = DateTime.UtcNow
+                Role = "ProjectManager",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
             },
             new NotifyService.Api.Models.User
             {
-                Id           = Guid.Parse("22222222-2222-2222-2222-222222222222"),
-                FullName     = "Member Demo",
-                Email        = "1@example.com",
+                Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+                FullName = "Member Demo",
+                Email = "1@example.com",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
-                Role         = "Member",
-                IsActive     = true,
-                CreatedAt    = DateTime.UtcNow
+                Role = "Member",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
             },
             new NotifyService.Api.Models.User
             {
-                Id           = Guid.Parse("33333333-3333-3333-3333-333333333333"),
-                FullName     = "Viewer Demo",
-                Email        = "3@example.com",
+                Id = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                FullName = "Viewer Demo",
+                Email = "3@example.com",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
-                Role         = "Viewer",
-                IsActive     = true,
-                CreatedAt    = DateTime.UtcNow
+                Role = "Viewer",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
             }
         );
         db.SaveChanges();
@@ -214,6 +216,7 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new PhysicalFileProvider(uploadsRoot),
     RequestPath = "/uploads"
 });
+app.UseCors("AllowVue");
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseAuthentication();
