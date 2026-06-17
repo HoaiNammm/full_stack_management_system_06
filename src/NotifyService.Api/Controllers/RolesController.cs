@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NotifyService.Api.Data;
@@ -11,9 +11,9 @@ namespace NotifyService.Api.Controllers;
 [Authorize]
 public class RolesController : ControllerBase
 {
-    private readonly NotifyDbContext _context;
+    private readonly AppDbContext _context;
 
-    public RolesController(NotifyDbContext context)
+    public RolesController(AppDbContext context)
     {
         _context = context;
     }
@@ -47,7 +47,7 @@ public class RolesController : ControllerBase
                 Id = Guid.NewGuid(),
                 Code = "Admin",
                 Name = "Administrator",
-                Description = "Quản trị hệ thống",
+                Description = "Quáº£n trá»‹ há»‡ thá»‘ng",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -56,7 +56,7 @@ public class RolesController : ControllerBase
                 Id = Guid.NewGuid(),
                 Code = "User",
                 Name = "User",
-                Description = "Người dùng hệ thống",
+                Description = "NgÆ°á»i dÃ¹ng há»‡ thá»‘ng",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             }

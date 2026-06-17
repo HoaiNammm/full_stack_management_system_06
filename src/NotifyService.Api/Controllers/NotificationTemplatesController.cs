@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NotifyService.Api.Data;
@@ -11,9 +11,9 @@ namespace NotifyService.Api.Controllers;
 [Authorize]
 public class NotificationTemplatesController : ControllerBase
 {
-    private readonly NotifyDbContext _context;
+    private readonly AppDbContext _context;
 
-    public NotificationTemplatesController(NotifyDbContext context)
+    public NotificationTemplatesController(AppDbContext context)
     {
         _context = context;
     }
@@ -27,8 +27,8 @@ public class NotificationTemplatesController : ControllerBase
             {
                 Id = Guid.NewGuid(),
                 Code = "COMMENT_MENTION",
-                TitleTemplate = "Bạn được nhắc đến trong một bình luận",
-                MessageTemplate = "Có người đã nhắc đến bạn trong một bình luận của task.",
+                TitleTemplate = "Báº¡n Ä‘Æ°á»£c nháº¯c Ä‘áº¿n trong má»™t bÃ¬nh luáº­n",
+                MessageTemplate = "CÃ³ ngÆ°á»i Ä‘Ã£ nháº¯c Ä‘áº¿n báº¡n trong má»™t bÃ¬nh luáº­n cá»§a task.",
                 Type = "COMMENT_MENTION",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
@@ -37,8 +37,8 @@ public class NotificationTemplatesController : ControllerBase
             {
                 Id = Guid.NewGuid(),
                 Code = "COMMENT_CREATED",
-                TitleTemplate = "Có bình luận mới",
-                MessageTemplate = "Một bình luận mới đã được tạo trong task.",
+                TitleTemplate = "CÃ³ bÃ¬nh luáº­n má»›i",
+                MessageTemplate = "Má»™t bÃ¬nh luáº­n má»›i Ä‘Ã£ Ä‘Æ°á»£c táº¡o trong task.",
                 Type = "COMMENT_CREATED",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow

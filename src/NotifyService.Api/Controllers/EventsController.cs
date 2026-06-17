@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NotifyService.Api.Data;
@@ -12,9 +12,9 @@ namespace NotifyService.Api.Controllers;
 [Authorize]
 public class EventsController : ControllerBase
 {
-    private readonly NotifyDbContext _context;
+    private readonly AppDbContext _context;
 
-    public EventsController(NotifyDbContext context)
+    public EventsController(AppDbContext context)
     {
         _context = context;
     }
@@ -24,17 +24,17 @@ public class EventsController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.EventId))
         {
-            return BadRequest(new { message = "EventId không được để trống" });
+            return BadRequest(new { message = "EventId khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng" });
         }
 
         if (string.IsNullOrWhiteSpace(request.EventType))
         {
-            return BadRequest(new { message = "EventType không được để trống" });
+            return BadRequest(new { message = "EventType khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng" });
         }
 
         if (string.IsNullOrWhiteSpace(request.SourceService))
         {
-            return BadRequest(new { message = "SourceService không được để trống" });
+            return BadRequest(new { message = "SourceService khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng" });
         }
 
         var existed = await _context.IncomingEvents
@@ -42,7 +42,7 @@ public class EventsController : ControllerBase
 
         if (existed)
         {
-            return Conflict(new { message = "EventId đã tồn tại, event bị trùng" });
+            return Conflict(new { message = "EventId Ä‘Ã£ tá»“n táº¡i, event bá»‹ trÃ¹ng" });
         }
 
         var incomingEvent = new IncomingEvent
@@ -66,7 +66,7 @@ public class EventsController : ControllerBase
             CreatedAt = DateTime.UtcNow
         });
 
-        // Bước đầu chỉ đánh dấu Processed để chứng minh flow hoạt động.
+        // BÆ°á»›c Ä‘áº§u chá»‰ Ä‘Ã¡nh dáº¥u Processed Ä‘á»ƒ chá»©ng minh flow hoáº¡t Ä‘á»™ng.
     
         incomingEvent.Status = "Processed";
         incomingEvent.ProcessedAt = DateTime.UtcNow;
@@ -125,7 +125,7 @@ public class EventsController : ControllerBase
 
         if (incomingEvent == null)
         {
-            return NotFound(new { message = "Không tìm thấy event" });
+            return NotFound(new { message = "KhÃ´ng tÃ¬m tháº¥y event" });
         }
 
         return Ok(new

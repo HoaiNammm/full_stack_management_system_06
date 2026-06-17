@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NotifyService.Api.Data;
@@ -10,9 +10,9 @@ namespace NotifyService.Api.Controllers;
 [Authorize]
 public class AuditLogsController : ControllerBase
 {
-    private readonly NotifyDbContext _context;
+    private readonly AppDbContext _context;
 
-    public AuditLogsController(NotifyDbContext context)
+    public AuditLogsController(AppDbContext context)
     {
         _context = context;
     }
@@ -60,7 +60,7 @@ public class AuditLogsController : ControllerBase
 
         if (log == null)
         {
-            return NotFound(new { message = "Không tìm thấy audit log" });
+            return NotFound(new { message = "KhÃ´ng tÃ¬m tháº¥y audit log" });
         }
 
         return Ok(log);

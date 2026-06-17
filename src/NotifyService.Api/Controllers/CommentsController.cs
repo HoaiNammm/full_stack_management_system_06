@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,34 +13,34 @@ namespace NotifyService.Api.Controllers;
 [Authorize]
 public class CommentsController : ControllerBase
 {
-    private readonly NotifyDbContext _context;
+    private readonly AppDbContext _context;
 
-    public CommentsController(NotifyDbContext context)
+    public CommentsController(AppDbContext context)
     {
         _context = context;
     }
     //  CreateComment
-    // Kiểm tra dữ liệu đầu vào  TaskId rỗng  & content trống -> trả về lỗi 400
+    // Kiá»ƒm tra dá»¯ liá»‡u Ä‘áº§u vÃ o  TaskId rá»—ng  & content trá»‘ng -> tráº£ vá» lá»—i 400
     [HttpPost]
     public async Task<IActionResult> CreateComment([FromBody] CreateCommentRequest request)
     {
         if (request.TaskId == Guid.Empty)
         {
-            return BadRequest(new { message = "TaskId không hợp lệ" });
+            return BadRequest(new { message = "TaskId khÃ´ng há»£p lá»‡" });
         }
 
         if (string.IsNullOrWhiteSpace(request.Content))
         {
-            return BadRequest(new { message = "Nội dung bình luận không được để trống" });
+            return BadRequest(new { message = "Ná»™i dung bÃ¬nh luáº­n khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng" });
         }
-        //  Trích xuất user đăng nhập
+        //  TrÃ­ch xuáº¥t user Ä‘Äƒng nháº­p
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
         {
-            return Unauthorized(new { message = "Token không hợp lệ hoặc thiếu UserId" });
+            return Unauthorized(new { message = "Token khÃ´ng há»£p lá»‡ hoáº·c thiáº¿u UserId" });
         }
-        // Khởi tạo Object coment mới , gán id, gán hười gian tạo
+        // Khá»Ÿi táº¡o Object coment má»›i , gÃ¡n id, gÃ¡n hÆ°á»i gian táº¡o
 
         var comment = new Comment
         {
@@ -114,7 +114,7 @@ public class CommentsController : ControllerBase
             actorUserId: userId,
             mentionedUserIds: mentionedUserIds
         );
-        // Lưu vào database
+        // LÆ°u vÃ o database
         await _context.SaveChangesAsync();
 
         var response = new CommentResponse
@@ -141,7 +141,7 @@ public class CommentsController : ControllerBase
 
         return Ok(response);
     }
-    // Lấy danh sách comment
+    // Láº¥y danh sÃ¡ch comment
     [HttpGet("task/{taskId:guid}")]
     public async Task<IActionResult> GetCommentsByTask(Guid taskId)
     {
@@ -182,27 +182,27 @@ public class CommentsController : ControllerBase
     [HttpPut("{commentId:guid}")]
     public async Task<IActionResult> UpdateComment(Guid commentId, [FromBody] UpdateCommentRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Content))//Nội dung rỗng  trả về 400
+        if (string.IsNullOrWhiteSpace(request.Content))//Ná»™i dung rá»—ng  tráº£ vá» 400
         {
-            return BadRequest(new { message = "Nội dung bình luận không được để trống" });
+            return BadRequest(new { message = "Ná»™i dung bÃ¬nh luáº­n khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng" });
         }
 
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
         {
-            return Unauthorized(new { message = "Token không hợp lệ hoặc thiếu UserId" });
+            return Unauthorized(new { message = "Token khÃ´ng há»£p lá»‡ hoáº·c thiáº¿u UserId" });
         }
 
-        var comment = await _context.Comments // tìm comment mang id = commentId
+        var comment = await _context.Comments // tÃ¬m comment mang id = commentId
             .FirstOrDefaultAsync(x => x.Id == commentId && !x.IsDeleted);
 
-        if (comment == null)// không tìm thấy comment trả về null = 404
+        if (comment == null)// khÃ´ng tÃ¬m tháº¥y comment tráº£ vá» null = 404
         {
-            return NotFound(new { message = "Không tìm thấy bình luận" });
+            return NotFound(new { message = "KhÃ´ng tÃ¬m tháº¥y bÃ¬nh luáº­n" });
         }
 
-        if (comment.UserId != userId) //Kiểm tra id check chủ comments
+        if (comment.UserId != userId) //Kiá»ƒm tra id check chá»§ comments
         {
             return Forbid();
         }
@@ -222,7 +222,7 @@ public class CommentsController : ControllerBase
         );
 
         comment.Content = request.Content.Trim();
-        comment.UpdatedAt = DateTime.UtcNow; // Cập nhật thời gian sửa
+        comment.UpdatedAt = DateTime.UtcNow; // Cáº­p nháº­t thá»i gian sá»­a
         AddActivityLog(
             userId: userId,
             taskId: comment.TaskId,
@@ -231,7 +231,7 @@ public class CommentsController : ControllerBase
             description: "User updated a comment on task",
             metadataJson: $"{{\"commentId\":\"{comment.Id}\"}}"
         );
-        // Lưu database
+        // LÆ°u database
         await _context.SaveChangesAsync();
 
         return Ok(new CommentResponse
@@ -250,22 +250,22 @@ public class CommentsController : ControllerBase
     [HttpDelete("{commentId:guid}")]
     public async Task<IActionResult> DeleteComment(Guid commentId)
     {
-        // Lấy user id từ payload jwt  (json web token)
+        // Láº¥y user id tá»« payload jwt  (json web token)
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
         {
-            return Unauthorized(new { message = "Token không hợp lệ hoặc thiếu UserId" });
+            return Unauthorized(new { message = "Token khÃ´ng há»£p lá»‡ hoáº·c thiáº¿u UserId" });
         }
-        //  Tìm comment theo id bỏ qua cac comment bị xóa
+        //  TÃ¬m comment theo id bá» qua cac comment bá»‹ xÃ³a
         var comment = await _context.Comments
             .FirstOrDefaultAsync(x => x.Id == commentId && !x.IsDeleted);
 
         if (comment == null)
         {
-            return NotFound(new { message = "Không tìm thấy bình luận" });
+            return NotFound(new { message = "KhÃ´ng tÃ¬m tháº¥y bÃ¬nh luáº­n" });
         }
-        //  Chặn xóa comment của người khác
+        //  Cháº·n xÃ³a comment cá»§a ngÆ°á»i khÃ¡c
         if (comment.UserId != userId)
         {
             return Forbid();
@@ -295,7 +295,7 @@ public class CommentsController : ControllerBase
 
         return Ok(new
         {
-            message = "Xóa bình luận thành công",
+            message = "XÃ³a bÃ¬nh luáº­n thÃ nh cÃ´ng",
             commentId = comment.Id
         });
 
@@ -326,9 +326,9 @@ public class CommentsController : ControllerBase
     }
 
     // Notifications
-    // 1. Tạo 1 bản ghi trong Notifications
-    // 2. Tạo nhiều bản ghi trong UserNotifications cho từng người được mention
-    // 3. Tạo NotificationLog để ghi lại việc tạo thông báo
+    // 1. Táº¡o 1 báº£n ghi trong Notifications
+    // 2. Táº¡o nhiá»u báº£n ghi trong UserNotifications cho tá»«ng ngÆ°á»i Ä‘Æ°á»£c mention
+    // 3. Táº¡o NotificationLog Ä‘á»ƒ ghi láº¡i viá»‡c táº¡o thÃ´ng bÃ¡o
     private void CreateMentionNotifications(Comment comment, Guid actorUserId, List<Guid> mentionedUserIds)
     {
         if (mentionedUserIds.Count == 0)
@@ -341,8 +341,8 @@ var notification = new Notification
     Id = Guid.NewGuid(),
     TaskId = comment.TaskId,
     ProjectId = comment.ProjectId,
-    Title = "Bạn được nhắc đến trong bình luận",
-    Message = "Có người đã nhắc đến bạn trong một bình luận.",
+    Title = "Báº¡n Ä‘Æ°á»£c nháº¯c Ä‘áº¿n trong bÃ¬nh luáº­n",
+    Message = "CÃ³ ngÆ°á»i Ä‘Ã£ nháº¯c Ä‘áº¿n báº¡n trong má»™t bÃ¬nh luáº­n.",
     Type = "COMMENT_MENTION",
     SourceService = "NotifyService",
     SourceEventId = comment.Id.ToString(),
@@ -431,7 +431,7 @@ public async Task<IActionResult> CreateProjectComment(Guid projectId, [FromBody]
     var userId = GetCurrentUserId();
 
     if (string.IsNullOrWhiteSpace(request.Content))
-        return BadRequest(new { success = false, message = "Nội dung bình luận không được để trống" });
+        return BadRequest(new { success = false, message = "Ná»™i dung bÃ¬nh luáº­n khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng" });
 
     var comment = new Comment
     {
@@ -453,7 +453,7 @@ public async Task<IActionResult> CreateProjectComment(Guid projectId, [FromBody]
 {
     Id = Guid.NewGuid(),
     ProjectId = projectId,
-    Title = "Có thảo luận mới trong dự án",
+    Title = "CÃ³ tháº£o luáº­n má»›i trong dá»± Ã¡n",
     Message = request.Content.Trim(),
     Type = "project_discussion",
     CreatedAt = DateTime.UtcNow
@@ -481,7 +481,7 @@ private Guid GetCurrentUserId()
     var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
     if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-        throw new UnauthorizedAccessException("Token không hợp lệ hoặc thiếu UserId");
+        throw new UnauthorizedAccessException("Token khÃ´ng há»£p lá»‡ hoáº·c thiáº¿u UserId");
 
     return userId;
 }
@@ -490,3 +490,4 @@ private Guid GetCurrentUserId()
 
 
 }
+

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NotifyService.Api.Data;
@@ -12,9 +12,9 @@ namespace NotifyService.Api.Controllers;
 [Authorize]
 public class UsersController : ControllerBase
 {
-    private readonly NotifyDbContext _context;
+    private readonly AppDbContext _context;
 
-    public UsersController(NotifyDbContext context)
+    public UsersController(AppDbContext context)
     {
         _context = context;
     }
@@ -70,7 +70,7 @@ public class UsersController : ControllerBase
 
         if (user == null)
         {
-            return NotFound(new { message = "Không tìm thấy người dùng" });
+            return NotFound(new { message = "KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng" });
         }
 
         return Ok(user);
@@ -86,17 +86,17 @@ public class UsersController : ControllerBase
 
         if (existingUser != null)
         {
-            return BadRequest(new { message = "Email đã tồn tại" });
+            return BadRequest(new { message = "Email Ä‘Ã£ tá»“n táº¡i" });
         }
 
         if (string.IsNullOrWhiteSpace(request.FullName))
         {
-            return BadRequest(new { message = "Họ tên không được để trống" });
+            return BadRequest(new { message = "Há» tÃªn khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng" });
         }
 
         if (string.IsNullOrWhiteSpace(request.Password))
         {
-            return BadRequest(new { message = "Mật khẩu không được để trống" });
+            return BadRequest(new { message = "Máº­t kháº©u khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng" });
         }
         var role = string.IsNullOrWhiteSpace(request.Role) ? "User" : request.Role;
 
@@ -105,7 +105,7 @@ public class UsersController : ControllerBase
 
         if (!roleExists)
         {
-            return BadRequest(new { message = "Role không hợp lệ hoặc chưa được kích hoạt" });
+            return BadRequest(new { message = "Role khÃ´ng há»£p lá»‡ hoáº·c chÆ°a Ä‘Æ°á»£c kÃ­ch hoáº¡t" });
         }
 
         var user = new User
@@ -131,7 +131,7 @@ public class UsersController : ControllerBase
 
         return Ok(new
         {
-            message = "Tạo người dùng thành công",
+            message = "Táº¡o ngÆ°á»i dÃ¹ng thÃ nh cÃ´ng",
             user = new
             {
                 user.Id,
@@ -156,12 +156,12 @@ public class UsersController : ControllerBase
 
         if (user == null)
         {
-            return NotFound(new { message = "Không tìm thấy người dùng" });
+            return NotFound(new { message = "KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng" });
         }
 
         if (string.IsNullOrWhiteSpace(request.FullName))
         {
-            return BadRequest(new { message = "Họ tên không được để trống" });
+            return BadRequest(new { message = "Há» tÃªn khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng" });
         }
 
         user.FullName = request.FullName.Trim();
@@ -175,7 +175,7 @@ public class UsersController : ControllerBase
 
         return Ok(new
         {
-            message = "Cập nhật người dùng thành công",
+            message = "Cáº­p nháº­t ngÆ°á»i dÃ¹ng thÃ nh cÃ´ng",
             user = new
             {
                 user.Id,
@@ -199,7 +199,7 @@ public class UsersController : ControllerBase
 
         if (user == null)
         {
-            return NotFound(new { message = "Không tìm thấy người dùng" });
+            return NotFound(new { message = "KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng" });
         }
 
         user.IsActive = request.IsActive;
@@ -209,7 +209,7 @@ public class UsersController : ControllerBase
 
         return Ok(new
         {
-            message = request.IsActive ? "Đã kích hoạt tài khoản" : "Đã khóa tài khoản",
+            message = request.IsActive ? "ÄÃ£ kÃ­ch hoáº¡t tÃ i khoáº£n" : "ÄÃ£ khÃ³a tÃ i khoáº£n",
             user.Id,
             user.Email,
             user.IsActive
@@ -225,7 +225,7 @@ public class UsersController : ControllerBase
         {
             return BadRequest(new
             {
-                message = "Role không hợp lệ hoặc chưa được kích hoạt"
+                message = "Role khÃ´ng há»£p lá»‡ hoáº·c chÆ°a Ä‘Æ°á»£c kÃ­ch hoáº¡t"
             });
         }
 
@@ -233,7 +233,7 @@ public class UsersController : ControllerBase
 
         if (user == null)
         {
-            return NotFound(new { message = "Không tìm thấy người dùng" });
+            return NotFound(new { message = "KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng" });
         }
 
         user.Role = request.Role;
@@ -243,7 +243,7 @@ public class UsersController : ControllerBase
 
         return Ok(new
         {
-            message = "Cập nhật quyền người dùng thành công",
+            message = "Cáº­p nháº­t quyá»n ngÆ°á»i dÃ¹ng thÃ nh cÃ´ng",
             user.Id,
             user.Email,
             user.Role
@@ -257,7 +257,7 @@ public class UsersController : ControllerBase
 
         if (user == null)
         {
-            return NotFound(new { message = "Không tìm thấy người dùng" });
+            return NotFound(new { message = "KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng" });
         }
 
         user.IsActive = false;
@@ -267,10 +267,11 @@ public class UsersController : ControllerBase
 
         return Ok(new
         {
-            message = "Đã khóa tài khoản người dùng",
+            message = "ÄÃ£ khÃ³a tÃ i khoáº£n ngÆ°á»i dÃ¹ng",
             user.Id,
             user.Email,
             user.IsActive
         });
     }
 }
+

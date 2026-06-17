@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,9 +11,9 @@ namespace NotifyService.Api.Controllers;
 [Authorize]
 public class NotificationsController : ControllerBase
 {
-    private readonly NotifyDbContext _context;
+    private readonly AppDbContext _context;
 
-    public NotificationsController(NotifyDbContext context)
+    public NotificationsController(AppDbContext context)
     {
         _context = context;
     }
@@ -25,7 +25,7 @@ public class NotificationsController : ControllerBase
 
         if (userId == null)
         {
-            return Unauthorized(new { message = "Token không hợp lệ hoặc thiếu UserId" });
+            return Unauthorized(new { message = "Token khÃ´ng há»£p lá»‡ hoáº·c thiáº¿u UserId" });
         }
 
         var notifications = await _context.UserNotifications
@@ -58,7 +58,7 @@ public class NotificationsController : ControllerBase
 
         if (userId == null)
         {
-            return Unauthorized(new { message = "Token không hợp lệ hoặc thiếu UserId" });
+            return Unauthorized(new { message = "Token khÃ´ng há»£p lá»‡ hoáº·c thiáº¿u UserId" });
         }
 
         var count = await _context.UserNotifications
@@ -77,7 +77,7 @@ public class NotificationsController : ControllerBase
 
         if (userId == null)
         {
-            return Unauthorized(new { message = "Token không hợp lệ hoặc thiếu UserId" });
+            return Unauthorized(new { message = "Token khÃ´ng há»£p lá»‡ hoáº·c thiáº¿u UserId" });
         }
 
         var userNotification = await _context.UserNotifications
@@ -85,7 +85,7 @@ public class NotificationsController : ControllerBase
 
         if (userNotification == null)
         {
-            return NotFound(new { message = "Không tìm thấy thông báo" });
+            return NotFound(new { message = "KhÃ´ng tÃ¬m tháº¥y thÃ´ng bÃ¡o" });
         }
 
         if (!userNotification.IsRead)
@@ -98,7 +98,7 @@ public class NotificationsController : ControllerBase
 
         return Ok(new
         {
-            message = "Đã đánh dấu thông báo là đã đọc",
+            message = "ÄÃ£ Ä‘Ã¡nh dáº¥u thÃ´ng bÃ¡o lÃ  Ä‘Ã£ Ä‘á»c",
             userNotificationId = userNotification.Id
         });
     }
@@ -110,7 +110,7 @@ public class NotificationsController : ControllerBase
 
         if (userId == null)
         {
-            return Unauthorized(new { message = "Token không hợp lệ hoặc thiếu UserId" });
+            return Unauthorized(new { message = "Token khÃ´ng há»£p lá»‡ hoáº·c thiáº¿u UserId" });
         }
 
         var unreadNotifications = await _context.UserNotifications
@@ -127,7 +127,7 @@ public class NotificationsController : ControllerBase
 
         return Ok(new
         {
-            message = "Đã đánh dấu tất cả thông báo là đã đọc",
+            message = "ÄÃ£ Ä‘Ã¡nh dáº¥u táº¥t cáº£ thÃ´ng bÃ¡o lÃ  Ä‘Ã£ Ä‘á»c",
             updatedCount = unreadNotifications.Count
         });
     }
@@ -149,3 +149,4 @@ public class NotificationsController : ControllerBase
         return userId;
     }
 }
+

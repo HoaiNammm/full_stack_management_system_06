@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using NotifyService.Api.Data;
 using NotifyService.Api.Models;
 
@@ -6,9 +6,9 @@ namespace NotifyService.Api.Services;
 
 public class NotificationService
 {
-    private readonly NotifyDbContext _context;
+    private readonly AppDbContext _context;
 
-    public NotificationService(NotifyDbContext context)
+    public NotificationService(AppDbContext context)
     {
         _context = context;
     }
@@ -90,3 +90,4 @@ public class NotificationService
         await _context.SaveChangesAsync();
     }
 }
+

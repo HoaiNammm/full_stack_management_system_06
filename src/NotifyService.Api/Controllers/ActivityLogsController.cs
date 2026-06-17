@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NotifyService.Api.Data;
@@ -10,9 +10,9 @@ namespace NotifyService.Api.Controllers;
 [Authorize]
 public class ActivityLogsController : ControllerBase
 {
-    private readonly NotifyDbContext _context;
+    private readonly AppDbContext _context;
 
-    public ActivityLogsController(NotifyDbContext context)
+    public ActivityLogsController(AppDbContext context)
     {
         _context = context;
     }

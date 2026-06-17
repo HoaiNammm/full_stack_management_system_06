@@ -7,12 +7,28 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    public DbSet<User> Users { get; set; }
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<LoginHistory> LoginHistories => Set<LoginHistory>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<SystemRole> SystemRoles => Set<SystemRole>();
+
+    public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
+    public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
+    public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
+    public DbSet<NotificationChannel> NotificationChannels => Set<NotificationChannel>();
+
+    public DbSet<IncomingEvent> IncomingEvents => Set<IncomingEvent>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<SystemLog> SystemLogs => Set<SystemLog>();
+    public DbSet<EventProcessingLog> EventProcessingLogs => Set<EventProcessingLog>();
+
+    public DbSet<CommentAttachment> CommentAttachments => Set<CommentAttachment>(); public DbSet<User> Users { get; set; }
     public DbSet<Comment> Comments { get; set; }
     public DbSet<CommentMention> CommentMentions { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<UserPreference> UserPreferences { get; set; }
     public DbSet<ActivityLog> ActivityLogs { get; set; }
+    
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
